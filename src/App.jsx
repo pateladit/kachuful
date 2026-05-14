@@ -1,18 +1,27 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Home from './pages/Home.jsx'
-import Login from './pages/Login.jsx'
-import Game from './pages/Game.jsx'
-import History from './pages/History.jsx'
+import { AuthProvider } from './hooks/useAuth'
+import ProtectedRoute from './components/ProtectedRoute'
+import Login from './pages/Login'
+import Home from './pages/Home'
+import Game from './pages/Game'
+import History from './pages/History'
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/game/:id" element={<Game />} />
-        <Route path="/history" element={<History />} />
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          {/* Public */}
+          <Route path="/login" element={<Login />} />
+
+          {/* Protected — redirects to /login if not authenticated */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/game/:id" element={<Game />} />
+            <Route path="/history" element={<History />} />
+          </Route>
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   )
 }
