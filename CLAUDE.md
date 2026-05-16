@@ -227,20 +227,16 @@ with the hardcoded test data stripped out.
   streaks, SVG score-progression line chart with hover tooltip, full running tab);
   `Game.jsx` phase router wired end-to-end; `App.jsx` route added
 
+- **Session 7** — `useHistory` hook (deep Supabase query: games → game_players →
+  rounds → bids + round_results), full `History.jsx` rewrite: 4-stat summary row
+  (total games, win rate, best round score, accuracy — scoped to the user's own
+  seat across all games), game list with per-game player scores, winner, duration,
+  status badge; clicking any game navigates to `/game/:id/final` (complete) or
+  `/game/:id` (in progress)
+
 ## Remaining Sessions
 
-### Session 7 — History & stats (`/history`)
-
-- List of all games the logged-in user created, sorted by date
-- Each row: game name, player count, winner, final scores, duration (`ended_at - started_at`)
-- Clicking a game → detail view using the RunningTab component (extracted from `final-results.jsx`)
-  plus final standings
-- Stats summary across all the user's games:
-  - Total games played
-  - Win rate (% of games where the user's named seat had the highest score)
-  - Best scoring round ever
-  - Accuracy rate (% of bids exactly correct across all games)
-- Data: Supabase joins across `games` + `game_players` + `rounds` + `bids` + `round_results`
+*(none — all sessions complete)*
 
 ## Deferred / Future
 
