@@ -220,33 +220,14 @@ with the hardcoded test data stripped out.
   `bid-entry.html` + `summary-modal.jsx` design handoffs; full `Game.jsx` phase
   router (`loading → bidding → playing → complete`); Home.jsx RLS fix (first
   player seat 0 gets `user_id = auth.uid()` so `is_game_member` returns true)
+- **Session 6** — `PlayingScreen` (locked bids grid, running tab, stat cards, chai
+  pause overlay), `ResultsEntry` (per-player number pad, flash animations, sum
+  validation, live rank deltas, MVP reveal, locks results to Supabase),
+  `FinalResults` page at `/game/:id/final` (standings table with medals/accuracy/
+  streaks, SVG score-progression line chart with hover tooltip, full running tab);
+  `Game.jsx` phase router wired end-to-end; `App.jsx` route added
 
 ## Remaining Sessions
-
-
-### Session 6 — Play, results, and end game (`/game/:id` continued)
-
-Built from `game-in-play.html`, `round-results.jsx`, and `final-results.jsx`.
-
-- **Waiting / in-play view** from `game-in-play.html`:
-  - Locked bids grid (all players' bids shown as tiles)
-  - Stat cards: hottest streak, biggest bid, dealer burden (recent 3 / by-player toggle)
-  - Pause / resume (☕ chai break overlay with elapsed MM:SS)
-  - "Enter Round Results →" CTA transitions to `results` phase
-- **Results entry** from `round-results.jsx`:
-  - Per-player tricks-won number pad; flash animation (green = made, red = missed)
-  - Sum validation: must equal `cards_dealt` to unlock "Next Round →"
-  - Live scoring: points this round, running totals, leaderboard with rank deltas
-  - MVP reveal (highest single-round scorer) when sum is exact
-  - On lock: INSERT `round_results` rows (tricks_won + computed score);
-    compute next round's trump + cards + dealer; INSERT new `rounds` row;
-    transition back to `bidding`
-  - **End Game** button: set `ended_at`, status → `complete`, navigate to `/game/:id/final`
-- **Final results** from `final-results.jsx`:
-  - Standings table with medal ranks, accuracy %, streaks
-  - SVG score progression chart (one line per player, hover tooltip, legend toggle)
-  - Full running tab (all rounds)
-  - "← Back to setup" navigates to `/`
 
 ### Session 7 — History & stats (`/history`)
 
