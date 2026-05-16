@@ -211,59 +211,70 @@ with the hardcoded test data stripped out.
 - **Session 1** — Vite + React scaffold, Tailwind v4, Supabase client, folder structure, placeholder routes
 - **Session 2** — `supabase/schema.sql` with all tables, RLS policies, auth trigger
 - **Session 3** — `useAuth` hook + `AuthProvider`, `ProtectedRoute`, `LoginPage`
+- **Session 4** — Lantern theme foundation (fonts, CSS tokens), `src/lib/gameLogic.js`,
+  Google OAuth + anonymous auth, Login page restyle, full `Home.jsx` setup page
+  (player roster, color picker, scoring variant, rules/rounds config, cut-for-dealer,
+  Supabase INSERT on submit)
 
 ## Remaining Sessions
 
-### Session 4 — Game creation (`/`)
+### Session 5 — Bidding phase (`/game/:id`)
 
-Setup page built from `setup.html` design handoff.
+Built from `bid-entry.html` design handoff. Introduces the `useGame` data hook and
+phase state machine that all subsequent game phases share.
 
-- **Foundation first**: load Bricolage Grotesque + Geist fonts in `index.html`;
-  register Lantern palette as Tailwind v4 tokens in `src/index.css`;
-  extract `src/lib/gameLogic.js` from `game-data.js`
-- Game name input (optional)
-- Player roster: add up to 11 players, each with a display name and color
-  chosen from the 12-color palette; drag to reorder seating
-- Scoring variant: 3 radio options showing the actual formula
-- No-trump round toggle
-- Deck selector (1 or 2)
-- Peak cards stepper (auto-calculates max from decks ÷ players; user can lower it)
-- Start cards stepper (default 1; user can raise it; must be ≤ peak)
-- Round preview: shows `start → peak → 1 (N rounds)` for the default first loop
-- "Cut for dealer" card-fan mechanic → random seat assigned as first dealer
-- On submit: create `games` row + `game_players` rows, set `started_at`, navigate to `/game/:id`
-- Auth additions: Google OAuth button + anonymous/guest login on `Login.jsx`
+- **`useGame` hook** — loads `games`, `game_players`, `rounds`, `bids`, `round_results`
+  for the current game ID; exposes live state + dispatch
+- **Phase state machine** (`useReducer`) — states: `loading` → `bidding` → `playing`
+  → `results` → `complete`; persisted in URL or game status so reload works
+- **Bid entry UI** from `bid-entry.html`:
+  - Top bar: brand, game name + round number, mini leaderboard (top 3), summary button
+  - Hero: trump suit card (glyph + name), cards this round, bid-sum progress bar
+  - Per-player rows: number pad 0→cards, dealer bids last, forbidden bid auto-locked
+    (dealer cannot make sum = cards), active player highlighted
+  - Running tab (last 5 rounds) with expand toggle
+  - "Skip" button to override card count for the round
+  - Footer: "Lock Bids →" enabled only when sum status is valid (not balanced/over)
+  - On lock: INSERT all bids to `bids` table, transition to `playing` phase
+- **Summary modal** (`summary-modal.jsx`) wired to top bar; pauses timer on open,
+  resumes on close; "End game now" sets `ended_at` + status → `complete`
 
-### Session 5 — Round play (`/game/:id`)
+### Session 6 — Play, results, and end game (`/game/:id` continued)
 
-Core game loop driven by a `useReducer` phase state machine.
+Built from `game-in-play.html`, `round-results.jsx`, and `final-results.jsx`.
 
-**Phases:**
-1. `bidding` — Trump/cards hero; per-player bid number pad; running total;
-   dealer constraint enforcement (forbidden bid auto-locked); skip button to
-   jump to a different card count; save all bids to `bids` table on lock
-2. `results` — Per-player tricks-won number pad; sum must equal `cards_dealt`
-   to enable lock; compute score via `gameLogic.scoreFor`; save to
-   `round_results`; show round summary with this-round + cumulative totals;
-   **End Game** button → set `ended_at`, status → `complete`, navigate to final results
-3. Auto-advance — Compute next round's trump + card count + dealer; create
-   `rounds` row; transition back to `bidding`
+- **Waiting / in-play view** from `game-in-play.html`:
+  - Locked bids grid (all players' bids shown as tiles)
+  - Stat cards: hottest streak, biggest bid, dealer burden (recent 3 / by-player toggle)
+  - Pause / resume (☕ chai break overlay with elapsed MM:SS)
+  - "Enter Round Results →" CTA transitions to `results` phase
+- **Results entry** from `round-results.jsx`:
+  - Per-player tricks-won number pad; flash animation (green = made, red = missed)
+  - Sum validation: must equal `cards_dealt` to unlock "Next Round →"
+  - Live scoring: points this round, running totals, leaderboard with rank deltas
+  - MVP reveal (highest single-round scorer) when sum is exact
+  - On lock: INSERT `round_results` rows (tricks_won + computed score);
+    compute next round's trump + cards + dealer; INSERT new `rounds` row;
+    transition back to `bidding`
+  - **End Game** button: set `ended_at`, status → `complete`, navigate to `/game/:id/final`
+- **Final results** from `final-results.jsx`:
+  - Standings table with medal ranks, accuracy %, streaks
+  - SVG score progression chart (one line per player, hover tooltip, legend toggle)
+  - Full running tab (all rounds)
+  - "← Back to setup" navigates to `/`
 
-**Summary modal** (`summary-modal.jsx`) accessible from the topbar at any time.
+### Session 7 — History & stats (`/history`)
 
-### Session 6 — History & stats (`/history`)
-
-- List of all games the logged-in user has been part of, sorted by date
-- Shows game name, player count, final scores, duration (`ended_at - started_at`)
-- Clicking a game → detail view: all rounds with bids vs actuals (running tab)
+- List of all games the logged-in user created, sorted by date
+- Each row: game name, player count, winner, final scores, duration (`ended_at - started_at`)
+- Clicking a game → detail view using the RunningTab component (extracted from `final-results.jsx`)
+  plus final standings
 - Stats summary across all the user's games:
   - Total games played
-  - Win rate (% of games where user had the highest score)
+  - Win rate (% of games where the user's named seat had the highest score)
   - Best scoring round ever
-  - Most common bid
-  - Accuracy rate (% of bids exactly correct)
-- Pull via Supabase joins: `game_players` + `rounds` + `bids` + `round_results`
-- Refactor `final-results.jsx` progression chart + running tab as reusable components
+  - Accuracy rate (% of bids exactly correct across all games)
+- Data: Supabase joins across `games` + `game_players` + `rounds` + `bids` + `round_results`
 
 ## Deferred / Future
 

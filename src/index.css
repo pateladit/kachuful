@@ -1,1 +1,25 @@
 @import "tailwindcss";
+
+@theme {
+  --color-bg:       #2a1620;
+  --color-bg-2:     #3a1f2c;
+  --color-surface:  #3d2330;
+  --color-ink:      #f6e7d3;
+  --color-ink-2:    #d8b893;
+  --color-muted:    #9b7c6b;
+  --color-line:     #5a3445;
+  --color-accent:   #e89a3c;
+  --color-accent-2: #d24a3d;
+  --color-accent-3: #b6c97a;
+  --color-red-suit: #e57860;
+
+  --font-display: 'Bricolage Grotesque', sans-serif;
+  --font-body:    'Geist', sans-serif;
+  --font-mono:    'Geist Mono', monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-ink font-body antialiased;
+  }
+}

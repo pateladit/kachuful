@@ -40,8 +40,25 @@ export function AuthProvider({ children }) {
     if (error) throw error
   }
 
+  // Note: Google OAuth must be enabled in the Supabase dashboard under
+  // Authentication → Providers → Google.
+  async function signInWithGoogle() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/history` },
+    })
+    if (error) throw error
+  }
+
+  async function signInAnonymously(displayName) {
+    const { error } = await supabase.auth.signInAnonymously({
+      options: { data: { username: displayName } },
+    })
+    if (error) throw error
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, signInWithGoogle, signInAnonymously }}>
       {children}
     </AuthContext.Provider>
   )
