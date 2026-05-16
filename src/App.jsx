@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login'
 import Home from './pages/Home'
 import Game from './pages/Game'
+import FinalResults from './pages/FinalResults'
 import History from './pages/History'
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<Home />} />
             <Route path="/game/:id" element={<Game />} />
+            <Route path="/game/:id/final" element={<FinalResults />} />
             <Route path="/history" element={<History />} />
           </Route>
         </Routes>

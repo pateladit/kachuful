@@ -126,7 +126,9 @@ export default function Home() {
         .insert(
           players.map((p, i) => ({
             game_id: game.id,
-            user_id: null,
+            // seat 0 is the creator/scorekeeper — sets user_id so RLS
+            // is_game_member() returns true for all subsequent queries
+            user_id: i === 0 ? user.id : null,
             display_name: p.displayName.trim(),
             color: p.color,
             seat_order: i,

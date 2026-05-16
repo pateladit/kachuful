@@ -215,29 +215,14 @@ with the hardcoded test data stripped out.
   Google OAuth + anonymous auth, Login page restyle, full `Home.jsx` setup page
   (player roster, color picker, scoring variant, rules/rounds config, cut-for-dealer,
   Supabase INSERT on submit)
+- **Session 5** — `useGame` hook (Supabase data loader + phase state machine),
+  `Avatar`, `GameTimer`, `SummaryModal`, `BidEntry` components built from
+  `bid-entry.html` + `summary-modal.jsx` design handoffs; full `Game.jsx` phase
+  router (`loading → bidding → playing → complete`); Home.jsx RLS fix (first
+  player seat 0 gets `user_id = auth.uid()` so `is_game_member` returns true)
 
 ## Remaining Sessions
 
-### Session 5 — Bidding phase (`/game/:id`)
-
-Built from `bid-entry.html` design handoff. Introduces the `useGame` data hook and
-phase state machine that all subsequent game phases share.
-
-- **`useGame` hook** — loads `games`, `game_players`, `rounds`, `bids`, `round_results`
-  for the current game ID; exposes live state + dispatch
-- **Phase state machine** (`useReducer`) — states: `loading` → `bidding` → `playing`
-  → `results` → `complete`; persisted in URL or game status so reload works
-- **Bid entry UI** from `bid-entry.html`:
-  - Top bar: brand, game name + round number, mini leaderboard (top 3), summary button
-  - Hero: trump suit card (glyph + name), cards this round, bid-sum progress bar
-  - Per-player rows: number pad 0→cards, dealer bids last, forbidden bid auto-locked
-    (dealer cannot make sum = cards), active player highlighted
-  - Running tab (last 5 rounds) with expand toggle
-  - "Skip" button to override card count for the round
-  - Footer: "Lock Bids →" enabled only when sum status is valid (not balanced/over)
-  - On lock: INSERT all bids to `bids` table, transition to `playing` phase
-- **Summary modal** (`summary-modal.jsx`) wired to top bar; pauses timer on open,
-  resumes on close; "End game now" sets `ended_at` + status → `complete`
 
 ### Session 6 — Play, results, and end game (`/game/:id` continued)
 

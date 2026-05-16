@@ -23,3 +23,15 @@
     @apply bg-bg text-ink font-body antialiased;
   }
 }
+
+/* Flash animations for results entry tiles */
+@keyframes flash-made {
+  0%   { background: color-mix(in oklab, #b6c97a 45%, transparent); }
+  100% { background: transparent; }
+}
+@keyframes flash-miss {
+  0%   { background: color-mix(in oklab, #d24a3d 40%, transparent); }
+  100% { background: transparent; }
+}
+.flash-made { animation: flash-made 1s ease forwards; }
+.flash-miss { animation: flash-miss 1s ease forwards; }
