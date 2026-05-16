@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useHistory } from '../hooks/useHistory'
 import Avatar from '../components/game/Avatar'
+import AccountMenu from '../components/AccountMenu'
 import { disambiguateInitials } from '../lib/gameLogic'
 
 const V = {
@@ -232,18 +233,11 @@ function GameCard({ rawGame, onOpen }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function History() {
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const { games, loading, error, reload } = useHistory()
 
   const stats = computeStats(games, user?.id)
-
-  async function handleSignOut() {
-    try {
-      await signOut()
-      navigate('/login')
-    } catch (_) {}
-  }
 
   function openGame(g) {
     if (g.status === 'complete') {
@@ -271,12 +265,7 @@ export default function History() {
           >
             + New game
           </button>
-          <button
-            onClick={handleSignOut}
-            style={{ background: 'transparent', border: `1px solid ${V.line}`, borderRadius: 12, padding: '10px 18px', fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '.08em', color: V.muted, cursor: 'pointer' }}
-          >
-            Sign out
-          </button>
+          <AccountMenu />
         </div>
       </header>
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { PLAYER_COLORS, defaultLoopRounds } from '../lib/gameLogic'
+import AccountMenu from '../components/AccountMenu'
 
 function makePlayer(index) {
   return {
@@ -147,10 +148,13 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-bg" onClick={() => setColorPickerOpen(null)}>
       {/* Sticky header */}
-      <header className="sticky top-0 z-10 bg-bg border-b border-line px-4 py-4">
-        <div className="max-w-lg mx-auto">
-          <span className="font-display font-bold text-xl text-ink">Ka·Chu·Fu·L</span>
-          <span className="text-muted text-base ml-2">· Game Setup</span>
+      <header className="sticky top-0 z-10 bg-bg border-b border-line px-4 py-3">
+        <div className="max-w-lg mx-auto flex items-center justify-between">
+          <div>
+            <span className="font-display font-bold text-xl text-ink">Ka·Chu·Fu·L</span>
+            <span className="text-muted text-base ml-2">· Game Setup</span>
+          </div>
+          <AccountMenu />
         </div>
       </header>
 
