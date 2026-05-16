@@ -14,43 +14,6 @@
 
 
 -- =============================================================================
--- HELPER FUNCTIONS (used by RLS policies)
--- =============================================================================
-
--- Returns true if the current user is a player in the given game.
--- SECURITY DEFINER bypasses RLS on game_players so this function can be
--- called from other tables' policies without infinite recursion.
-CREATE OR REPLACE FUNCTION public.is_game_member(p_game_id uuid)
-RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.game_players
-    WHERE game_players.game_id = p_game_id
-      AND game_players.user_id = auth.uid()
-  );
-$$;
-
--- Returns true if the current user created the given game.
-CREATE OR REPLACE FUNCTION public.is_game_creator(p_game_id uuid)
-RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.games
-    WHERE games.id = p_game_id
-      AND games.created_by = auth.uid()
-  );
-$$;
-
-
--- =============================================================================
 -- TABLE: profiles
 -- =============================================================================
 -- One row per Supabase auth user (email, Google, or anonymous).
@@ -232,6 +195,44 @@ CREATE TABLE public.round_results (
 
 CREATE INDEX ON public.round_results (round_id);
 CREATE INDEX ON public.round_results (game_player_id);
+
+
+-- =============================================================================
+-- HELPER FUNCTIONS (used by RLS policies)
+-- =============================================================================
+-- Defined after tables so LANGUAGE sql can resolve the referenced relations.
+
+-- Returns true if the current user is a player in the given game.
+-- SECURITY DEFINER bypasses RLS on game_players so this function can be
+-- called from other tables' policies without infinite recursion.
+CREATE OR REPLACE FUNCTION public.is_game_member(p_game_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.game_players
+    WHERE game_players.game_id = p_game_id
+      AND game_players.user_id = auth.uid()
+  );
+$$;
+
+-- Returns true if the current user created the given game.
+CREATE OR REPLACE FUNCTION public.is_game_creator(p_game_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.games
+    WHERE games.id = p_game_id
+      AND games.created_by = auth.uid()
+  );
+$$;
 
 
 -- =============================================================================
