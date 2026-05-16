@@ -3,6 +3,13 @@
 -- =============================================================================
 -- Run this in the Supabase SQL editor or via the Supabase CLI.
 -- Tables: profiles, games, game_players, rounds, bids, round_results
+--
+-- Auth modes supported:
+--   • Email + password
+--   • Google OAuth
+--   • Anonymous (guest scorekeeper — enters just a display name, no account)
+--     Anonymous users are in the 'authenticated' role and are covered by all
+--     RLS policies below without any special handling.
 -- =============================================================================
 
 
@@ -10,9 +17,9 @@
 -- HELPER FUNCTIONS (used by RLS policies)
 -- =============================================================================
 
--- Returns true if the current authenticated user is a registered player in the
--- given game. SECURITY DEFINER bypasses RLS on game_players so this function
--- can be safely called from other tables' RLS policies without infinite recursion.
+-- Returns true if the current user is a player in the given game.
+-- SECURITY DEFINER bypasses RLS on game_players so this function can be
+-- called from other tables' policies without infinite recursion.
 CREATE OR REPLACE FUNCTION public.is_game_member(p_game_id uuid)
 RETURNS boolean
 LANGUAGE sql
@@ -27,7 +34,7 @@ AS $$
   );
 $$;
 
--- Returns true if the current authenticated user created the given game.
+-- Returns true if the current user created the given game.
 CREATE OR REPLACE FUNCTION public.is_game_creator(p_game_id uuid)
 RETURNS boolean
 LANGUAGE sql
@@ -46,8 +53,10 @@ $$;
 -- =============================================================================
 -- TABLE: profiles
 -- =============================================================================
--- One row per registered Supabase auth user.
--- Automatically created via the handle_new_user trigger (see bottom of file).
+-- One row per Supabase auth user (email, Google, or anonymous).
+-- Created automatically via handle_new_user trigger on auth.users insert.
+-- Anonymous users get a NULL username — they identify via display_name
+-- on game_players instead.
 
 CREATE TABLE public.profiles (
   id          uuid        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -56,34 +65,53 @@ CREATE TABLE public.profiles (
   created_at  timestamptz NOT NULL DEFAULT now()
 );
 
--- Indexes
 CREATE INDEX ON public.profiles (username);
 
 
 -- =============================================================================
 -- TABLE: games
 -- =============================================================================
--- A single game session. Holds the configuration chosen when the game is created.
+-- One row per game session.
 --
--- scoring_variant: controls how points are calculated each round
---   1 → correct bid scores 10 + tricks_won
---   2 → correct bid scores (10 × tricks_won) + 1; zero bid scores 1
---   3 → correct bid scores (10 × tricks_won) + 1; zero bid scores 10
+-- Round card sequence (computed by the app, not stored):
+--   Leg 1 (ascending): start_cards, start_cards+1, …, peak_cards
+--   Leg 2 (descending): peak_cards-1, …, 1
+--   Leg 3+ (repeating): 2, …, peak_cards, peak_cards-1, …, 1
+--   Game ends when scorekeeper taps "End Game" — no fixed round count.
 --
--- no_trump_round: whether a 5th round with no trump suit is played after Hearts
--- status:         'in_progress' while playing, 'complete' when the game is over
+-- Trump rotation per round: Ka (♠) → Chu (♦) → Fu (♣) → Laal (♥)
+--   If no_trump_round is true, a fifth NT (⚬) suit follows Laal.
+--   The 4- or 5-suit cycle repeats across all rounds.
+--
+-- scoring_variant:
+--   1 → bid met: 10 + tricks_won;    missed: 0
+--   2 → bid met: (10 × tricks_won)+1; zero bid: 1;  missed: 0
+--   3 → bid met: (10 × tricks_won)+1; zero bid: 10; missed: 0
+--
+-- Dealer rotates +1 seat each round (seat_order mod player_count).
+-- first_dealer_seat is the seat_order of the round-1 dealer, chosen
+-- via the "cut for dealer" card-tap mechanic on the setup screen.
+--
+-- started_at / ended_at replace the in-app timer; duration is derived
+-- from these two timestamps.
 
 CREATE TABLE public.games (
-  id               uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  created_by       uuid        NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
-  scoring_variant  smallint    NOT NULL DEFAULT 1 CHECK (scoring_variant IN (1, 2, 3)),
-  no_trump_round   boolean     NOT NULL DEFAULT false,
-  status           text        NOT NULL DEFAULT 'in_progress'
-                               CHECK (status IN ('in_progress', 'complete')),
-  created_at       timestamptz NOT NULL DEFAULT now()
+  id                 uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_by         uuid        NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
+  name               text,
+  scoring_variant    smallint    NOT NULL DEFAULT 1 CHECK (scoring_variant IN (1, 2, 3)),
+  num_decks          smallint    NOT NULL DEFAULT 1 CHECK (num_decks IN (1, 2)),
+  start_cards        int         NOT NULL DEFAULT 1 CHECK (start_cards >= 1),
+  peak_cards         int         NOT NULL CHECK (peak_cards >= start_cards),
+  no_trump_round     boolean     NOT NULL DEFAULT false,
+  first_dealer_seat  int         NOT NULL DEFAULT 0,
+  status             text        NOT NULL DEFAULT 'in_progress'
+                                 CHECK (status IN ('in_progress', 'complete')),
+  started_at         timestamptz,
+  ended_at           timestamptz,
+  created_at         timestamptz NOT NULL DEFAULT now()
 );
 
--- Indexes
 CREATE INDEX ON public.games (created_by);
 CREATE INDEX ON public.games (status);
 
@@ -91,30 +119,36 @@ CREATE INDEX ON public.games (status);
 -- =============================================================================
 -- TABLE: game_players
 -- =============================================================================
--- Each row is one player's seat in a game.
--- Registered users have user_id set; guest players have guest_name set instead.
--- The CHECK constraint enforces that every player has at least one identifier.
+-- One seat per player per game. Supports both registered and guest players.
 --
--- seat_order: 0-based position around the table, used to determine bid/play order
---             and to identify the dealer each round.
+-- display_name: the name shown in-game. Always set. Independent of the
+--   linked profile's username — the same person can appear as "Dad" in one
+--   game and "Rohit" in another with no cross-game correlation.
+--
+-- user_id: optional. Set when a registered/anonymous auth user is a player,
+--   enabling RLS membership checks. NULL for players who are just names
+--   (entered by the scorekeeper on behalf of others at the table).
+--
+-- color: one of 12 palette hex values assigned at setup (see CLAUDE.md).
+--
+-- seat_order: 0-based clockwise position. Bid order each round is:
+--   seat (dealer+1) mod N → … → dealer (bids last).
 
 CREATE TABLE public.game_players (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   game_id       uuid        NOT NULL REFERENCES public.games(id) ON DELETE CASCADE,
   user_id       uuid        REFERENCES public.profiles(id) ON DELETE SET NULL,
-  guest_name    text,
+  display_name  text        NOT NULL CHECK (display_name <> ''),
+  color         text        NOT NULL DEFAULT '#e89a3c',
   seat_order    int         NOT NULL CHECK (seat_order >= 0),
   created_at    timestamptz NOT NULL DEFAULT now(),
 
-  -- A registered user may only appear once per game
+  -- A registered/anonymous user may only hold one seat per game
   UNIQUE (game_id, user_id),
   -- Seat positions must be unique within a game
-  UNIQUE (game_id, seat_order),
-  -- Every player must be identified either as a registered user or a guest
-  CHECK (user_id IS NOT NULL OR (guest_name IS NOT NULL AND guest_name <> ''))
+  UNIQUE (game_id, seat_order)
 );
 
--- Indexes
 CREATE INDEX ON public.game_players (game_id);
 CREATE INDEX ON public.game_players (user_id);
 
@@ -122,13 +156,18 @@ CREATE INDEX ON public.game_players (user_id);
 -- =============================================================================
 -- TABLE: rounds
 -- =============================================================================
--- One row per round played within a game.
+-- One row per round played.
 --
--- cards_dealt: number of cards dealt to each player this round
--- trump_suit:  the trump for this round; follows the rotation
---              spades (Ka) → diamonds (Chu) → clubs (Fu) → hearts (Laal) → none
--- dealer_id:   the game_player who is dealer this round (bids last and is
---              constrained from making total bids equal to cards_dealt)
+-- cards_dealt: actual card count for this round. The app computes the
+--   expected value from start_cards / peak_cards, but the scorekeeper can
+--   tap "skip" on the bid-entry screen to jump to a different card count,
+--   so the stored value is authoritative.
+--
+-- trump_suit: 'spades' | 'diamonds' | 'clubs' | 'hearts' | 'none'
+--   Computed by the app from round_number mod cycle length (4 or 5).
+--
+-- dealer_id: the game_player who deals this round.
+--   Computed: game_players seat = (first_dealer_seat + round_number - 1) mod N.
 
 CREATE TABLE public.rounds (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -140,11 +179,9 @@ CREATE TABLE public.rounds (
   dealer_id     uuid        NOT NULL REFERENCES public.game_players(id) ON DELETE RESTRICT,
   created_at    timestamptz NOT NULL DEFAULT now(),
 
-  -- Round numbers must be unique within a game
   UNIQUE (game_id, round_number)
 );
 
--- Indexes
 CREATE INDEX ON public.rounds (game_id);
 CREATE INDEX ON public.rounds (dealer_id);
 
@@ -152,9 +189,10 @@ CREATE INDEX ON public.rounds (dealer_id);
 -- =============================================================================
 -- TABLE: bids
 -- =============================================================================
--- Each player's bid for a given round (number of tricks they expect to win).
--- The dealer's bid is validated by the application to ensure the sum of all bids
--- does not equal cards_dealt (forcing at least one player to fail).
+-- Each player's bid for a round (tricks they expect to win).
+--
+-- Dealer constraint (enforced by the app):
+--   dealer's bid cannot make sum(all bids) = cards_dealt.
 
 CREATE TABLE public.bids (
   id              uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -163,11 +201,9 @@ CREATE TABLE public.bids (
   bid             int         NOT NULL CHECK (bid >= 0),
   created_at      timestamptz NOT NULL DEFAULT now(),
 
-  -- One bid per player per round
   UNIQUE (round_id, game_player_id)
 );
 
--- Indexes
 CREATE INDEX ON public.bids (round_id);
 CREATE INDEX ON public.bids (game_player_id);
 
@@ -175,15 +211,13 @@ CREATE INDEX ON public.bids (game_player_id);
 -- =============================================================================
 -- TABLE: round_results
 -- =============================================================================
--- Actual tricks won and the computed score for each player at the end of a round.
+-- Tricks won and computed score per player per round.
 --
--- score is stored (not re-computed on every read) so historical scores remain
--- correct even if the scoring_variant is ever changed on the game row.
+-- score is stored (not recomputed on read) so history is correct even if
+-- scoring_variant is ever patched on the parent game row.
 --
--- Scoring rules (applied by the application before inserting):
---   Variant 1: bid met → 10 + tricks_won;    missed → 0
---   Variant 2: bid met → (10 × tricks_won) + 1; zero bid → 1; missed → 0
---   Variant 3: bid met → (10 × tricks_won) + 1; zero bid → 10; missed → 0
+-- If the scorekeeper taps "End Game" while a round is in progress, that
+-- round's bids are saved but no round_results row is created for it.
 
 CREATE TABLE public.round_results (
   id              uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -193,11 +227,9 @@ CREATE TABLE public.round_results (
   score           int         NOT NULL DEFAULT 0 CHECK (score >= 0),
   created_at      timestamptz NOT NULL DEFAULT now(),
 
-  -- One result per player per round
   UNIQUE (round_id, game_player_id)
 );
 
--- Indexes
 CREATE INDEX ON public.round_results (round_id);
 CREATE INDEX ON public.round_results (game_player_id);
 
@@ -215,147 +247,115 @@ ALTER TABLE public.round_results ENABLE ROW LEVEL SECURITY;
 
 
 -- -----------------------------------------------------------------------------
--- profiles policies
+-- profiles
 -- -----------------------------------------------------------------------------
 
--- Any authenticated user can read any profile.
--- Usernames and avatars need to be visible to all players in a shared game.
+-- Any authenticated user (including anonymous) can read all profiles.
 CREATE POLICY "Authenticated users can read all profiles"
-  ON public.profiles
-  FOR SELECT
+  ON public.profiles FOR SELECT
   TO authenticated
   USING (true);
 
--- A user may only update their own profile row.
+-- Users can only update their own profile.
 CREATE POLICY "Users can update their own profile"
-  ON public.profiles
-  FOR UPDATE
+  ON public.profiles FOR UPDATE
   TO authenticated
   USING (id = auth.uid())
   WITH CHECK (id = auth.uid());
 
--- INSERT is handled exclusively by the handle_new_user trigger (SECURITY DEFINER),
--- so no INSERT policy is needed here for normal application use.
+-- INSERT is handled by the handle_new_user trigger (SECURITY DEFINER).
 
 
 -- -----------------------------------------------------------------------------
--- games policies
+-- games
 -- -----------------------------------------------------------------------------
 
--- A user can see a game if they created it OR if they have a seat in it.
--- is_game_member() covers both cases when user is also the creator and has a
--- seat; the OR handles the edge case where created_by has no game_players row.
+-- User can see a game if they created it or have a seat in it.
 CREATE POLICY "Users can view games they belong to"
-  ON public.games
-  FOR SELECT
+  ON public.games FOR SELECT
   TO authenticated
   USING (
     created_by = auth.uid()
     OR public.is_game_member(id)
   );
 
--- Any authenticated user can create a game, but the created_by must be themselves.
 CREATE POLICY "Users can create games"
-  ON public.games
-  FOR INSERT
+  ON public.games FOR INSERT
   TO authenticated
   WITH CHECK (created_by = auth.uid());
 
--- Only the creator can update game settings or mark it complete.
 CREATE POLICY "Only the creator can update a game"
-  ON public.games
-  FOR UPDATE
+  ON public.games FOR UPDATE
   TO authenticated
   USING (created_by = auth.uid())
   WITH CHECK (created_by = auth.uid());
 
--- Only the creator can delete a game.
 CREATE POLICY "Only the creator can delete a game"
-  ON public.games
-  FOR DELETE
+  ON public.games FOR DELETE
   TO authenticated
   USING (created_by = auth.uid());
 
 
 -- -----------------------------------------------------------------------------
--- game_players policies
+-- game_players
 -- -----------------------------------------------------------------------------
 
--- A user can see the player list for any game they are a member of.
--- is_game_member() uses SECURITY DEFINER so it reads game_players without
--- triggering this policy recursively.
+-- Members can view the player list for any game they are in.
+-- is_game_member uses SECURITY DEFINER to avoid recursive RLS on this table.
 CREATE POLICY "Members can view players in their games"
-  ON public.game_players
-  FOR SELECT
+  ON public.game_players FOR SELECT
   TO authenticated
   USING (public.is_game_member(game_id));
 
--- Only the game creator can add players (registered or guest).
 CREATE POLICY "Game creator can add players"
-  ON public.game_players
-  FOR INSERT
+  ON public.game_players FOR INSERT
   TO authenticated
   WITH CHECK (public.is_game_creator(game_id));
 
--- Only the game creator can update seat assignments or swap a guest name.
 CREATE POLICY "Game creator can update players"
-  ON public.game_players
-  FOR UPDATE
+  ON public.game_players FOR UPDATE
   TO authenticated
   USING (public.is_game_creator(game_id))
   WITH CHECK (public.is_game_creator(game_id));
 
--- Only the game creator can remove players.
 CREATE POLICY "Game creator can remove players"
-  ON public.game_players
-  FOR DELETE
+  ON public.game_players FOR DELETE
   TO authenticated
   USING (public.is_game_creator(game_id));
 
 
 -- -----------------------------------------------------------------------------
--- rounds policies
+-- rounds
 -- -----------------------------------------------------------------------------
 
--- Any member of the game can view its rounds.
 CREATE POLICY "Members can view rounds in their games"
-  ON public.rounds
-  FOR SELECT
+  ON public.rounds FOR SELECT
   TO authenticated
   USING (public.is_game_member(game_id));
 
--- Only the game creator can add rounds.
 CREATE POLICY "Game creator can insert rounds"
-  ON public.rounds
-  FOR INSERT
+  ON public.rounds FOR INSERT
   TO authenticated
   WITH CHECK (public.is_game_creator(game_id));
 
--- Only the game creator can edit a round (e.g. correct a trump suit).
 CREATE POLICY "Game creator can update rounds"
-  ON public.rounds
-  FOR UPDATE
+  ON public.rounds FOR UPDATE
   TO authenticated
   USING (public.is_game_creator(game_id))
   WITH CHECK (public.is_game_creator(game_id));
 
--- Only the game creator can delete a round.
 CREATE POLICY "Game creator can delete rounds"
-  ON public.rounds
-  FOR DELETE
+  ON public.rounds FOR DELETE
   TO authenticated
   USING (public.is_game_creator(game_id));
 
 
 -- -----------------------------------------------------------------------------
--- bids policies
+-- bids
 -- -----------------------------------------------------------------------------
 
--- Any member of the game can view all bids for that game's rounds.
--- We join through rounds to reach the game_id for the membership check.
 CREATE POLICY "Members can view bids in their games"
-  ON public.bids
-  FOR SELECT
+  ON public.bids FOR SELECT
   TO authenticated
   USING (
     EXISTS (
@@ -365,10 +365,8 @@ CREATE POLICY "Members can view bids in their games"
     )
   );
 
--- Only the game creator can record bids (they enter all bids on behalf of the table).
 CREATE POLICY "Game creator can insert bids"
-  ON public.bids
-  FOR INSERT
+  ON public.bids FOR INSERT
   TO authenticated
   WITH CHECK (
     EXISTS (
@@ -378,10 +376,8 @@ CREATE POLICY "Game creator can insert bids"
     )
   );
 
--- Only the game creator can correct a bid.
 CREATE POLICY "Game creator can update bids"
-  ON public.bids
-  FOR UPDATE
+  ON public.bids FOR UPDATE
   TO authenticated
   USING (
     EXISTS (
@@ -398,10 +394,8 @@ CREATE POLICY "Game creator can update bids"
     )
   );
 
--- Only the game creator can delete a bid.
 CREATE POLICY "Game creator can delete bids"
-  ON public.bids
-  FOR DELETE
+  ON public.bids FOR DELETE
   TO authenticated
   USING (
     EXISTS (
@@ -413,13 +407,11 @@ CREATE POLICY "Game creator can delete bids"
 
 
 -- -----------------------------------------------------------------------------
--- round_results policies
+-- round_results
 -- -----------------------------------------------------------------------------
 
--- Any member of the game can view round results.
 CREATE POLICY "Members can view results in their games"
-  ON public.round_results
-  FOR SELECT
+  ON public.round_results FOR SELECT
   TO authenticated
   USING (
     EXISTS (
@@ -429,10 +421,8 @@ CREATE POLICY "Members can view results in their games"
     )
   );
 
--- Only the game creator can record results.
 CREATE POLICY "Game creator can insert results"
-  ON public.round_results
-  FOR INSERT
+  ON public.round_results FOR INSERT
   TO authenticated
   WITH CHECK (
     EXISTS (
@@ -442,10 +432,8 @@ CREATE POLICY "Game creator can insert results"
     )
   );
 
--- Only the game creator can correct a result.
 CREATE POLICY "Game creator can update results"
-  ON public.round_results
-  FOR UPDATE
+  ON public.round_results FOR UPDATE
   TO authenticated
   USING (
     EXISTS (
@@ -462,10 +450,8 @@ CREATE POLICY "Game creator can update results"
     )
   );
 
--- Only the game creator can delete a result.
 CREATE POLICY "Game creator can delete results"
-  ON public.round_results
-  FOR DELETE
+  ON public.round_results FOR DELETE
   TO authenticated
   USING (
     EXISTS (
@@ -479,11 +465,9 @@ CREATE POLICY "Game creator can delete results"
 -- =============================================================================
 -- TRIGGER: auto-create profile on sign-up
 -- =============================================================================
--- Fires after a new row is inserted into auth.users (i.e. every new sign-up).
--- Derives an initial username from the metadata supplied during sign-up,
--- falling back to the part of the email address before the '@'.
--- SECURITY DEFINER allows the function to insert into profiles even though
--- the new user does not yet have an RLS-approved session.
+-- Fires for every new auth.users row: email/password, Google OAuth, anonymous.
+-- Anonymous users have no email and no username metadata → profile.username is NULL.
+-- That is fine; their in-game identity is display_name on game_players.
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
@@ -495,10 +479,13 @@ BEGIN
   INSERT INTO public.profiles (id, username)
   VALUES (
     NEW.id,
-    COALESCE(
-      NEW.raw_user_meta_data->>'username',
-      split_part(NEW.email, '@', 1)
-    )
+    CASE
+      WHEN NEW.raw_user_meta_data->>'username' IS NOT NULL
+        THEN NEW.raw_user_meta_data->>'username'
+      WHEN NEW.email IS NOT NULL
+        THEN split_part(NEW.email, '@', 1)
+      ELSE NULL  -- anonymous users: no username derived
+    END
   );
   RETURN NEW;
 END;
