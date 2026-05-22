@@ -248,7 +248,7 @@ export default function History() {
   }
 
   return (
-    <div style={{ maxWidth: 1000, margin: '0 auto', padding: '24px 32px 48px', minHeight: '100vh' }}>
+    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 32px 48px', minHeight: '100vh' }}>
 
       {/* ─── Header ─── */}
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, paddingBottom: 16, borderBottom: `1px solid ${V.line}` }}>
@@ -287,7 +287,7 @@ export default function History() {
 
       {/* ─── Stats row ─── */}
       {!loading && !error && games.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 32 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 32 }}>
           <StatCard
             label="Games played"
             value={stats.totalGames}

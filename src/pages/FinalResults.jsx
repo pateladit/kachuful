@@ -413,6 +413,7 @@ export default function FinalResults() {
           </h2>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.muted }}>Sorted by total points</div>
         </div>
+        <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-body)', fontSize: 14 }}>
           <thead>
             <tr style={{ background: V.bg2 }}>
@@ -475,6 +476,7 @@ export default function FinalResults() {
             })}
           </tbody>
         </table>
+        </div>
       </section>
 
       {/* ─── Score progression chart ─── */}
