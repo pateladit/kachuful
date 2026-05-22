@@ -14,7 +14,7 @@ const V = {
 }
 
 export default function AccountMenu() {
-  const { user, signOut } = useAuth()
+  const { user, signOut, isAdmin } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
@@ -96,10 +96,24 @@ export default function AccountMenu() {
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, marginTop: 2 }}>
               {isAnonymous ? 'Guest session' : user?.email ?? ''}
             </div>
+            {isAnonymous && (
+              <button
+                onClick={() => go('/preferences')}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  background: 'none', border: 'none', padding: '4px 0 0',
+                  fontFamily: 'var(--font-body)', fontSize: 12,
+                  color: V.accent, cursor: 'pointer', textDecoration: 'none',
+                }}
+              >
+                Save your account →
+              </button>
+            )}
           </div>
 
           <MenuItem icon="◷" label="Game history" onClick={() => go('/history')} />
-          <MenuItem icon="◈" label="Preferences" onClick={() => {}} muted subtitle="Coming soon" />
+          <MenuItem icon="◈" label="Preferences" onClick={() => go('/preferences')} />
+          {isAdmin && <MenuItem icon="⚙" label="Admin" onClick={() => go('/admin')} />}
 
           <div style={{ borderTop: `1px solid ${V.line}`, marginTop: 4, paddingTop: 4 }}>
             <MenuItem icon="→" label="Sign out" onClick={handleSignOut} danger />

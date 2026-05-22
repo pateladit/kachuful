@@ -24,6 +24,21 @@
   }
 }
 
+/* Mehfil (light) theme overrides */
+:root[data-theme="mehfil"] {
+  --color-bg:       #f6efe2;
+  --color-bg-2:     #ece1cb;
+  --color-surface:  #fffaf0;
+  --color-ink:      #2a1a14;
+  --color-ink-2:    #5b4438;
+  --color-muted:    #8e7a6c;
+  --color-line:     #d8c8b1;
+  --color-accent:   #c14a2b;
+  --color-accent-2: #e08a1e;
+  --color-accent-3: #1f5c4a;
+  --color-red-suit: #b62a2a;
+}
+
 /* Flash animations for results entry tiles */
 @keyframes flash-made {
   0%   { background: color-mix(in oklab, #b6c97a 45%, transparent); }

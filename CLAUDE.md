@@ -238,9 +238,12 @@ with the hardcoded test data stripped out.
 
 *(none — all sessions complete)*
 
+## Planned Improvements
+
+*(none — all planned improvements complete)*
+
 ## Deferred / Future
 
 - **Offline support** — defer; internet connection assumed for now
-- **Admin view** — view all games across all users (not just own games)
-- **Light theme** (Mehfil palette) — design exists, not planned for initial build
-- **Player account upgrade prompt** — encouraging anonymous users to create an account
+- **Multi-device sessions** — each player connects on their own phone to view status and submit bids; major architecture pivot, very future
+- **Multi-game support** — game type selector on setup screen (Ka·Chu·Fu·L + others); low-lift: store `game_type` on game row, other types show "coming soon"

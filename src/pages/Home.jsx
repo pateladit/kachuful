@@ -23,6 +23,25 @@ export default function Home() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
+  const isAnonymous = !user?.email && !user?.user_metadata?.provider
+  const [showBanner, setShowBanner] = useState(false)
+
+  useEffect(() => {
+    if (!isAnonymous || !user?.id) return
+    if (localStorage.getItem('kachuful-banner-dismissed')) return
+    supabase
+      .from('games')
+      .select('id', { count: 'exact', head: true })
+      .eq('created_by', user.id)
+      .eq('status', 'complete')
+      .then(({ count }) => { if (count >= 2) setShowBanner(true) })
+  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function dismissBanner() {
+    localStorage.setItem('kachuful-banner-dismissed', '1')
+    setShowBanner(false)
+  }
+
   const [gameName, setGameName] = useState('')
   const [players, setPlayers] = useState([makePlayer(0), makePlayer(1)])
   const [scoringVariant, setScoringVariant] = useState(1)
@@ -157,6 +176,39 @@ export default function Home() {
           <AccountMenu />
         </div>
       </header>
+
+      {/* Upgrade banner — anonymous users with ≥2 complete games */}
+      {showBanner && (
+        <div style={{
+          background: 'var(--color-accent)',
+          color: '#2a1620',
+          padding: '10px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', opacity: 0.7 }}>Guest</span>
+            <span style={{ fontFamily: 'var(--font-body)', fontSize: 13 }}>
+              Your history lives only on this device.
+            </span>
+            <button
+              onClick={() => navigate('/preferences')}
+              style={{ background: 'none', border: 'none', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600, color: '#2a1620', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+            >
+              Save your account →
+            </button>
+          </div>
+          <button
+            onClick={dismissBanner}
+            style={{ background: 'none', border: 'none', fontSize: 16, color: '#2a1620', cursor: 'pointer', opacity: 0.6, flexShrink: 0, lineHeight: 1, padding: '0 4px' }}
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Scrollable body */}
       <main className="max-w-5xl mx-auto px-4 lg:px-8 pt-6 pb-36">

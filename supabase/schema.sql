@@ -25,6 +25,7 @@ CREATE TABLE public.profiles (
   id          uuid        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   username    text,
   avatar_url  text,
+  is_admin    boolean     NOT NULL DEFAULT false,
   created_at  timestamptz NOT NULL DEFAULT now()
 );
 

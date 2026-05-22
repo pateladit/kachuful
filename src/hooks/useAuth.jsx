@@ -6,6 +6,7 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     // Resolve the initial session before rendering protected routes
@@ -20,6 +21,17 @@ export function AuthProvider({ children }) {
 
     return () => subscription.unsubscribe()
   }, [])
+
+  // Fetch is_admin whenever the logged-in user changes
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return }
+    supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => setIsAdmin(data?.is_admin ?? false))
+  }, [user?.id])
 
   async function signIn(email, password) {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -57,8 +69,30 @@ export function AuthProvider({ children }) {
     if (error) throw error
   }
 
+  // Upgrade anonymous → email/password account.
+  // Sends a confirmation email; session stays anonymous until confirmed.
+  async function upgradeWithEmail(email, password) {
+    const { error } = await supabase.auth.updateUser({ email, password })
+    if (error) throw error
+  }
+
+  // Link Google identity to the current (anonymous) session.
+  // Requires "Identity Linking" enabled in Supabase Auth settings.
+  async function linkWithGoogle() {
+    const { error } = await supabase.auth.linkIdentity({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/preferences` },
+    })
+    if (error) throw error
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, signInWithGoogle, signInAnonymously }}>
+    <AuthContext.Provider value={{
+      user, loading, isAdmin,
+      signIn, signUp, signOut,
+      signInWithGoogle, signInAnonymously,
+      upgradeWithEmail, linkWithGoogle,
+    }}>
       {children}
     </AuthContext.Provider>
   )
