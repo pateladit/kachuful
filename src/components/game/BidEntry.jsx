@@ -1,172 +1,27 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Avatar from './Avatar'
 import GameTimer from './GameTimer'
 import SummaryModal from './SummaryModal'
 import { TRUMPS, computeTotals, computeRanks, scoreFor } from '../../lib/gameLogic'
 
 const V = {
-  bg:       'var(--color-bg, #2a1620)',
-  bg2:      'var(--color-bg-2, #3a1f2c)',
-  surface:  'var(--color-surface, #3d2330)',
-  surface2: '#4a2c3a',
-  ink:      'var(--color-ink, #f6e7d3)',
-  ink2:     'var(--color-ink-2, #d8b893)',
-  muted:    'var(--color-muted, #9b7c6b)',
-  line:     'var(--color-line, #5a3445)',
-  accent:   'var(--color-accent, #e89a3c)',
-  accent2:  'var(--color-accent-2, #d24a3d)',
-  accent3:  'var(--color-accent-3, #b6c97a)',
-  red:      'var(--color-red-suit, #e57860)',
+  bg:      'var(--color-bg, #2a1620)',
+  bg2:     'var(--color-bg-2, #3a1f2c)',
+  surface: 'var(--color-surface, #3d2330)',
+  ink:     'var(--color-ink, #f6e7d3)',
+  ink2:    'var(--color-ink-2, #d8b893)',
+  muted:   'var(--color-muted, #9b7c6b)',
+  line:    'var(--color-line, #5a3445)',
+  accent:  'var(--color-accent, #e89a3c)',
+  accent2: 'var(--color-accent-2, #d24a3d)',
+  accent3: 'var(--color-accent-3, #b6c97a)',
+  red:     'var(--color-red-suit, #e57860)',
 }
 
 const SCORING_LABELS = {
   1: 'Made: 10 + tricks won · Missed: 0',
   2: 'Made: 10×bid + 1 · Missed: 0',
   3: 'Made: 10×bid + 1 · Nil made = 10 · Missed: 0',
-}
-
-// ── PlayerRow ─────────────────────────────────────────────────────────
-function PlayerRow({ player, isActive, isDealer, bid, cards, forbidden, onSetBid, onClickRow }) {
-  const locked = bid !== undefined
-  const pending = !isActive && !locked
-
-  return (
-    <div
-      onClick={onClickRow}
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '220px 1fr 160px',
-        alignItems: 'center',
-        padding: '14px 20px',
-        borderRadius: 14,
-        marginTop: 6,
-        cursor: 'pointer',
-        outline: `1px solid ${isActive ? `color-mix(in oklab, ${V.accent} 60%, transparent)` : 'transparent'}`,
-        background: isActive
-          ? `color-mix(in oklab, ${V.accent} 10%, ${V.surface2})`
-          : isDealer
-            ? `color-mix(in oklab, ${V.accent2} 8%, ${V.bg2})`
-            : 'transparent',
-        opacity: pending ? 0.55 : 1,
-        transition: 'background .15s ease, outline-color .15s ease',
-      }}
-    >
-      {/* Who */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <Avatar player={player} size={52} isDealer={isDealer} glow={isActive} />
-        <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 22, color: V.ink, letterSpacing: '-0.01em', lineHeight: 1 }}>
-            {player.displayName}
-          </div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: V.muted, marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
-            {isDealer && (
-              <span style={{ background: `color-mix(in oklab, ${V.accent} 22%, transparent)`, color: V.accent, padding: '3px 8px', borderRadius: 999, fontWeight: 700, fontSize: 9, letterSpacing: '.16em' }}>
-                DEALER · LAST
-              </span>
-            )}
-            {isActive && <span style={{ color: V.accent, fontSize: 13, lineHeight: 0 }}>●</span>}
-            <span>
-              {isActive
-                ? 'On the call'
-                : locked
-                  ? `Bid in · ${bid}${bid === 0 ? ' (nil)' : ''}`
-                  : isDealer
-                    ? 'Bids last · waiting'
-                    : 'Pending'}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Bid pad */}
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-start', pointerEvents: (isActive || locked) ? 'auto' : 'none' }}
-      >
-        {Array.from({ length: cards + 1 }, (_, n) => {
-          const isForbidden = forbidden === n
-          const isSelected = bid === n
-          return (
-            <button
-              key={n}
-              disabled={isForbidden && !isSelected}
-              onClick={() => { if (!isForbidden) onSetBid(n) }}
-              title={isForbidden ? "Can't bid this — would make sum equal cards" : ''}
-              style={{
-                background: isSelected
-                  ? V.accent
-                  : isForbidden
-                    ? `color-mix(in oklab, ${V.accent2} 12%, transparent)`
-                    : V.bg2,
-                border: `1px solid ${isSelected ? V.accent : isForbidden ? `color-mix(in oklab, ${V.accent2} 50%, ${V.line})` : V.line}`,
-                color: isSelected
-                  ? '#2a1620'
-                  : isForbidden
-                    ? V.accent2
-                    : V.ink2,
-                borderRadius: 10,
-                fontFamily: 'var(--font-mono)',
-                fontWeight: 600,
-                fontSize: 18,
-                minWidth: 46,
-                height: 46,
-                cursor: isForbidden ? 'not-allowed' : 'pointer',
-                padding: '0 6px',
-                textDecoration: isForbidden ? 'line-through' : 'none',
-                fontFeatureSettings: '"tnum"',
-                opacity: locked && !isSelected ? 0.35 : 1,
-                transition: 'background .12s ease, color .12s ease',
-              }}
-            >
-              {n}
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Outcome */}
-      <div
-        style={{
-          textAlign: 'right',
-          fontFamily: 'var(--font-mono)',
-          fontSize: 10,
-          letterSpacing: '.12em',
-          textTransform: 'uppercase',
-          lineHeight: 1.4,
-          color: isActive && isDealer && forbidden !== null ? V.accent2
-            : isActive ? V.accent
-            : V.muted,
-        }}
-      >
-        {locked ? (
-          <>
-            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 40, letterSpacing: '-0.02em', lineHeight: 1, marginBottom: 4, color: bid === 0 ? V.accent3 : V.ink, fontFeatureSettings: '"tnum"' }}>
-              {bid}
-            </div>
-            <div>{bid === 0 ? 'NIL CALL' : `${bid} TRICK${bid > 1 ? 'S' : ''}`}</div>
-          </>
-        ) : isActive ? (
-          <>
-            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 40, letterSpacing: '-0.02em', lineHeight: 1, marginBottom: 4, color: V.accent }}>
-              —
-            </div>
-            <div>
-              {isDealer && forbidden !== null
-                ? <>CAN'T BID <b style={{ color: V.accent2 }}>{forbidden}</b></>
-                : 'TAP A NUMBER'}
-            </div>
-          </>
-        ) : (
-          <>
-            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 40, letterSpacing: '-0.02em', lineHeight: 1, marginBottom: 4, color: V.muted }}>
-              —
-            </div>
-            <div>{isDealer && forbidden !== null ? `CAN'T BID ${forbidden}` : 'PENDING'}</div>
-          </>
-        )}
-      </div>
-    </div>
-  )
 }
 
 // ── BidEntry ──────────────────────────────────────────────────────────
@@ -178,6 +33,7 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const advanceBidTimerRef = useRef(null)
 
   // Bid order: (dealerIdx+1)%n, ..., dealerIdx
   const n = players.length
@@ -189,6 +45,10 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
     setCards(defaultCards)
     setActive(bidOrder[0] ?? 0)
     setSubmitError('')
+    if (advanceBidTimerRef.current) {
+      clearTimeout(advanceBidTimerRef.current)
+      advanceBidTimerRef.current = null
+    }
   }, [roundNumber]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync defaultCards when it changes (e.g. from hook)
@@ -222,26 +82,41 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
   let sumStatus = 'under'
   let sumLabel = ''
   if (!allBidsIn) {
-    sumLabel = `${n - numBidsIn} LEFT TO BID`
+    sumLabel = `${n - numBidsIn} left to bid`
   } else if (sumOfBids === cards) {
     sumStatus = 'balanced'
-    sumLabel = 'INVALID · SUM EQUALS CARDS'
+    sumLabel = 'INVALID'
   } else if (sumOfBids > cards) {
     sumStatus = 'over'
-    sumLabel = `OVER · ${sumOfBids - cards} MORE THAN CARDS`
+    sumLabel = `+${sumOfBids - cards} over`
   } else {
     sumStatus = 'complete'
-    sumLabel = `READY · ${cards - sumOfBids} SHORT`
+    sumLabel = `${cards - sumOfBids} short · ready`
   }
 
   const lockReady = allBidsIn && sumOfBids !== cards && !submitting
+
+  function handleChipClick(playerIdx) {
+    if (advanceBidTimerRef.current) {
+      clearTimeout(advanceBidTimerRef.current)
+      advanceBidTimerRef.current = null
+    }
+    setActive(playerIdx)
+  }
 
   function setBid(playerIdx, value) {
     const p = players[playerIdx]
     if (!p) return
     const newBids = { ...bids, [p.id]: value }
     setBidsState(newBids)
-    // Advance to next pending player in bid order
+
+    // Cancel any pending auto-advance
+    if (advanceBidTimerRef.current) {
+      clearTimeout(advanceBidTimerRef.current)
+      advanceBidTimerRef.current = null
+    }
+
+    // Find next pending player in bid order
     const bidOrderPos = bidOrder.indexOf(playerIdx)
     let next = null
     for (let i = 1; i <= n; i++) {
@@ -252,7 +127,11 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
         break
       }
     }
-    setActive(next)
+
+    advanceBidTimerRef.current = setTimeout(() => {
+      setActive(next)
+      advanceBidTimerRef.current = null
+    }, 350)
   }
 
   async function handleLock() {
@@ -287,6 +166,11 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
 
   const sumBarPct = Math.min(100, cards > 0 ? (sumOfBids / cards) * 100 : 0)
   const sumBarColor = sumStatus === 'over' ? V.accent2 : sumStatus === 'balanced' ? '#e57860' : sumStatus === 'complete' ? V.accent3 : V.accent
+
+  // Active player data for spotlight
+  const activePlayer = active !== null ? players[active] : null
+  const activeBid = activePlayer ? bids[activePlayer.id] : undefined
+  const activeForbidden = active === dealerIdx && dealerForbiddenInRange ? dealerForbidden : null
 
   return (
     <>
@@ -458,31 +342,155 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
               {sumStatus === 'over' && <span>▲</span>}
               {sumStatus === 'under' && <span>○</span>}
               {sumStatus === 'complete' && <span>✓</span>}
-              {sumLabel}
+              {allBidsIn ? (sumStatus === 'over' ? `OVER · ${sumOfBids - cards} MORE THAN CARDS` : sumStatus === 'balanced' ? 'INVALID · SUM EQUALS CARDS' : `READY · ${cards - sumOfBids} SHORT`) : `${n - numBidsIn} LEFT TO BID`}
             </div>
           </div>
         </section>
 
-        {/* ─── Player rows ─── */}
-        <section style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 20, padding: 12 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr 160px', padding: '8px 20px 12px', fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, borderBottom: `1px solid ${V.line}` }}>
-            <div>Player · dealer bids last</div>
-            <div>Tap to bid · 0 to {cards}</div>
-            <div style={{ textAlign: 'right' }}>Bid</div>
+        {/* ─── Spotlight entry ─── */}
+        <section style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 20, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+
+          {/* Chips strip */}
+          <div style={{ padding: '10px 14px', borderBottom: `1px solid ${V.line}`, display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', flex: 1 }}>
+              {bidOrder.map((playerIdx) => {
+                const p = players[playerIdx]
+                const bid = bids[p.id]
+                const isActive = active === playerIdx
+                const isDone = bid !== undefined
+                const isDealer = playerIdx === dealerIdx
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => handleChipClick(playerIdx)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 7,
+                      padding: '6px 12px', borderRadius: 999, flexShrink: 0,
+                      background: isActive
+                        ? `color-mix(in oklab, ${V.accent} 18%, ${V.bg2})`
+                        : isDone
+                          ? `color-mix(in oklab, ${p.color} 14%, ${V.bg2})`
+                          : 'transparent',
+                      border: `1.5px solid ${isActive ? V.accent : isDone ? `color-mix(in oklab, ${p.color} 55%, transparent)` : V.line}`,
+                      cursor: 'pointer',
+                      opacity: !isActive && !isDone ? 0.4 : 1,
+                      transition: 'all .15s ease',
+                    }}
+                  >
+                    <Avatar player={p} size={22} isDealer={isDealer} />
+                    <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13, color: isActive || isDone ? V.ink : V.muted, whiteSpace: 'nowrap' }}>
+                      {p.displayName}
+                    </span>
+                    {isDone ? (
+                      <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17, color: bid === 0 ? V.accent3 : V.ink, letterSpacing: '-0.02em' }}>
+                        {bid}
+                      </span>
+                    ) : isActive ? (
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: V.accent, display: 'inline-block', flexShrink: 0 }} />
+                    ) : null}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Sum pill */}
+            <div style={{ flexShrink: 0, marginLeft: 4 }}>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.08em',
+                padding: '5px 11px', borderRadius: 999,
+                background: sumStatus === 'over' ? `color-mix(in oklab, ${V.accent2} 20%, transparent)` : sumStatus === 'balanced' ? `color-mix(in oklab, ${V.red} 20%, transparent)` : sumStatus === 'complete' ? `color-mix(in oklab, ${V.accent3} 20%, transparent)` : V.bg2,
+                color: sumStatus === 'over' ? V.accent2 : sumStatus === 'balanced' ? '#e57860' : sumStatus === 'complete' ? V.accent3 : V.ink2,
+                border: `1px solid ${sumStatus === 'over' ? `color-mix(in oklab, ${V.accent2} 45%, transparent)` : sumStatus === 'balanced' ? 'color-mix(in oklab, #e57860 45%, transparent)' : sumStatus === 'complete' ? `color-mix(in oklab, ${V.accent3} 45%, transparent)` : V.line}`,
+              }}>
+                <b style={{ fontFamily: 'var(--font-display)', fontSize: 14, letterSpacing: '-0.01em' }}>{sumOfBids}</b>
+                <span style={{ opacity: 0.6 }}>/{cards}</span>
+                <span style={{ opacity: 0.5, fontSize: 9 }}>·</span>
+                <span style={{ fontSize: 10 }}>{sumLabel}</span>
+              </div>
+            </div>
           </div>
-          {players.map((p, i) => (
-            <PlayerRow
-              key={p.id}
-              player={p}
-              isActive={active === i}
-              isDealer={i === dealerIdx}
-              bid={bids[p.id]}
-              cards={cards}
-              forbidden={i === dealerIdx && dealerForbiddenInRange ? dealerForbidden : null}
-              onSetBid={v => setBid(i, v)}
-              onClickRow={() => setActive(i)}
-            />
-          ))}
+
+          {/* Spotlight card */}
+          {activePlayer ? (
+            <div style={{
+              padding: '28px 32px 22px',
+              background: `color-mix(in oklab, ${activePlayer.color} 6%, transparent)`,
+              flex: 1,
+            }}>
+              {/* Player header */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 22 }}>
+                <Avatar player={activePlayer} size={72} isDealer={active === dealerIdx} glow />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 30, color: V.ink, letterSpacing: '-0.02em', lineHeight: 1 }}>
+                    {activePlayer.displayName}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    {active === dealerIdx && (
+                      <span style={{ background: `color-mix(in oklab, ${V.accent} 22%, transparent)`, color: V.accent, padding: '2px 8px', borderRadius: 999, fontWeight: 700, fontSize: 9, letterSpacing: '.16em' }}>DEALER · BIDS LAST</span>
+                    )}
+                    <span>{active === dealerIdx ? 'Bids last this round' : 'On the call'}</span>
+                    {activeForbidden !== null && (
+                      <span style={{ color: V.accent2 }}>· Can&apos;t bid <b style={{ color: V.accent2 }}>{activeForbidden}</b></span>
+                    )}
+                  </div>
+                </div>
+                {activeBid !== undefined && (
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 52, color: activeBid === 0 ? V.accent3 : V.ink, letterSpacing: '-0.03em', lineHeight: 1 }}>
+                      {activeBid}
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted, letterSpacing: '.12em', textTransform: 'uppercase', marginTop: 4 }}>
+                      {activeBid === 0 ? 'NIL CALL' : `${activeBid} TRICK${activeBid > 1 ? 'S' : ''}`}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Number buttons */}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {Array.from({ length: cards + 1 }, (_, num) => {
+                  const isForbidden = activeForbidden === num
+                  const isSelected = activeBid === num
+                  return (
+                    <button
+                      key={num}
+                      disabled={isForbidden && !isSelected}
+                      onClick={() => { if (!isForbidden) setBid(active, num) }}
+                      title={isForbidden ? "Can't bid this — would make sum equal cards" : ''}
+                      style={{
+                        flex: '1 0 auto',
+                        minWidth: 56,
+                        height: 64,
+                        borderRadius: 12,
+                        background: isSelected ? V.accent : isForbidden ? `color-mix(in oklab, ${V.accent2} 12%, transparent)` : V.bg2,
+                        border: `1.5px solid ${isSelected ? V.accent : isForbidden ? `color-mix(in oklab, ${V.accent2} 50%, ${V.line})` : V.line}`,
+                        color: isSelected ? '#2a1620' : isForbidden ? V.accent2 : V.ink2,
+                        fontFamily: 'var(--font-mono)',
+                        fontWeight: 700,
+                        fontSize: 22,
+                        cursor: isForbidden ? 'not-allowed' : 'pointer',
+                        textDecoration: isForbidden ? 'line-through' : 'none',
+                        fontFeatureSettings: '"tnum"',
+                        transition: 'background .12s ease',
+                      }}
+                    >
+                      {num}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div style={{ marginTop: 14, fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, letterSpacing: '.08em', textAlign: 'center' }}>
+                Advances automatically · tap any chip to go back and edit
+              </div>
+            </div>
+          ) : (
+            <div style={{ padding: '48px 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24, color: V.accent3 }}>All bids in!</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.muted }}>Review bids above · lock to start the round.</div>
+            </div>
+          )}
         </section>
 
         {/* ─── Running tab ─── */}
@@ -637,9 +645,9 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
             {submitError ? (
               <span style={{ color: V.accent2 }}>{submitError}</span>
             ) : allBidsIn && sumOfBids === cards ? (
-              <span style={{ color: V.accent2 }}>Dealer's bid would make total = cards. <b style={{ color: V.ink }}>Change the dealer's call.</b></span>
+              <span style={{ color: V.accent2 }}>Dealer&apos;s bid would make total = cards. <b style={{ color: V.ink }}>Change the dealer&apos;s call.</b></span>
             ) : !allBidsIn ? (
-              <>Tap each player's call. <b style={{ color: V.ink }}>Dealer's forbidden bid auto-locks</b> when others are in.</>
+              <>Tap each player&apos;s call. <b style={{ color: V.ink }}>Dealer&apos;s forbidden bid auto-locks</b> when others are in.</>
             ) : (
               <>All bids in. <b style={{ color: V.ink }}>Lock to start the round.</b></>
             )}
