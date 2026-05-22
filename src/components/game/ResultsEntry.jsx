@@ -247,7 +247,7 @@ export default function ResultsEntry({
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted }}>Bid</span>
                     <b style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: bid === 0 ? V.accent3 : V.ink }}>
-                      {bid === 0 ? 'NIL' : bid}
+                      {bid}
                     </b>
                   </div>
 
@@ -280,7 +280,7 @@ export default function ResultsEntry({
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, paddingTop: 8, borderTop: `1px solid ${V.line}` }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700, color: isSet ? (made ? V.accent3 : V.accent2) : V.muted }}>
-                      {isSet ? (made ? (bid === 0 ? '● MADE NIL' : '● MADE') : '● MISSED') : '● PENDING'}
+                      {isSet ? (made ? '● MADE' : '● MISSED') : '● PENDING'}
                     </span>
                     <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: isSet ? (made ? V.accent3 : V.accent2) : V.muted }}>
                       {isSet ? (made ? `+${earned}` : '0') : '—'}
@@ -302,7 +302,7 @@ export default function ResultsEntry({
                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: V.ink }}>{mvp.player.displayName}</div>
               </div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.ink2, marginBottom: 8 }}>
-                Bid <b style={{ color: V.ink }}>{mvp.bid === 0 ? 'NIL' : mvp.bid}</b> · took <b style={{ color: V.ink }}>{mvp.took}</b> · earned the most points this round
+                Bid <b style={{ color: V.ink }}>{mvp.bid}</b> · took <b style={{ color: V.ink }}>{mvp.took}</b> · earned the most points this round
               </div>
               <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 42, letterSpacing: '-0.02em', color: V.accent }}>
                 +{mvp.pts}<small style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, letterSpacing: '.12em', color: V.muted, marginLeft: 8 }}>POINTS</small>
