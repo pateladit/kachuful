@@ -30,6 +30,12 @@ function formatRank(rk) {
   return `${n}${suffix}`
 }
 
+function totalColor(score, min, max) {
+  if (max === min) return V.ink
+  const t = (score - min) / (max - min)
+  return `color-mix(in oklab, ${V.accent3} ${Math.round(t * 100)}%, ${V.accent2})`
+}
+
 const scoringLabels = {
   1: 'Classic · 10+bid',
   2: '10×bid+1',
@@ -60,6 +66,9 @@ export default function SummaryModal({
   const totals = computeTotals(players, completedRounds, variant)
   const ranks = computeRanks(players, totals)
   const sorted = [...players].sort((a, b) => totals[b.id] - totals[a.id])
+  const totalScores = players.map(p => totals[p.id])
+  const minTotal = Math.min(...totalScores)
+  const maxTotal = Math.max(...totalScores)
   const leader = sorted[0]
   const second = sorted[1]
   const margin = leader && second ? totals[leader.id] - totals[second.id] : 0
@@ -227,9 +236,9 @@ export default function SummaryModal({
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, marginBottom: 12 }}>
             Full running tab · {allRoundsForTab.length} rounds
           </div>
-          <div style={{ overflowX: 'auto' }}>
+          <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '50vh' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-mono)', fontSize: 11, tableLayout: 'fixed' }}>
-              <thead>
+              <thead style={{ position: 'sticky', top: 0, zIndex: 3 }}>
                 <tr style={{ background: V.surface }}>
                   <th style={{ textAlign: 'left', padding: '8px 12px', borderBottom: `1px solid ${V.line}`, color: V.muted, fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', width: 72 }}>Round</th>
                   {players.map(p => (
@@ -276,17 +285,27 @@ export default function SummaryModal({
                     </tr>
                   )
                 })}
-                {completedRounds.length > 0 && (
+              </tbody>
+              {completedRounds.length > 0 && (
+                <tfoot style={{ position: 'sticky', bottom: 0, zIndex: 2 }}>
                   <tr style={{ background: V.surface }}>
-                    <td style={{ padding: '10px 12px', fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted }}>TOTAL</td>
+                    <td style={{ padding: '10px 12px', fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, borderTop: `1px solid ${V.line}` }}>TOTAL</td>
                     {players.map(p => (
-                      <td key={p.id} style={{ padding: '10px 6px', borderLeft: `1px solid ${V.line}`, textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: p.id === leader?.id ? V.accent : V.ink }}>
+                      <td key={p.id} style={{ padding: '10px 6px', borderLeft: `1px solid ${V.line}`, borderTop: `1px solid ${V.line}`, textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: totalColor(totals[p.id], minTotal, maxTotal), background: V.surface }}>
                         {totals[p.id]}
                       </td>
                     ))}
                   </tr>
-                )}
-              </tbody>
+                  <tr style={{ background: V.bg2 }}>
+                    <td style={{ padding: '8px 12px', fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, background: V.bg2 }}>RANK</td>
+                    {players.map(p => (
+                      <td key={p.id} style={{ padding: '8px 6px', borderLeft: `1px solid ${V.line}`, textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 12, color: p.id === leader?.id ? V.accent : V.ink2, background: V.bg2 }}>
+                        {formatRank(ranks[p.id])}
+                      </td>
+                    ))}
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         </div>

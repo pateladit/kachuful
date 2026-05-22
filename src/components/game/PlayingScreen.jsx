@@ -29,6 +29,12 @@ function formatRank(rk) {
   return `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'}`
 }
 
+function totalColor(score, min, max) {
+  if (max === min) return V.ink
+  const t = (score - min) / (max - min)
+  return `color-mix(in oklab, ${V.accent3} ${Math.round(t * 100)}%, ${V.accent2})`
+}
+
 export default function PlayingScreen({
   game, players, completedRounds, pendingRound,
   roundNumber, trump, dealerIdx, endGame, onEnterResults,
@@ -63,6 +69,9 @@ export default function PlayingScreen({
   const totals = computeTotals(players, completedRounds, variant)
   const ranks = computeRanks(players, totals)
   const sorted = [...players].sort((a, b) => totals[b.id] - totals[a.id])
+  const totalScores = players.map(p => totals[p.id])
+  const minTotal = Math.min(...totalScores)
+  const maxTotal = Math.max(...totalScores)
   const leaderId = sorted[0]?.id
 
   const cards = pendingRound?.cards ?? 0
@@ -216,7 +225,7 @@ export default function PlayingScreen({
                   {pendingRound?.bids[p.id] ?? '—'}
                 </div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: V.muted, marginTop: 4 }}>
-                  {pendingRound?.bids[p.id] === 0 ? 'NIL CALL' : `BID ${pendingRound?.bids[p.id] === 1 ? 'TRICK' : 'TRICKS'}`}
+                  {`BID ${(pendingRound?.bids[p.id] ?? 0) === 1 ? 'TRICK' : 'TRICKS'}`}
                 </div>
               </div>
             ))}
@@ -236,9 +245,9 @@ export default function PlayingScreen({
               Made <span style={{ color: V.accent3 }}>●</span> · Missed <span style={{ color: V.accent2 }}>●</span>
             </span>
           </div>
-          <div style={{ borderTop: `1px solid ${V.line}`, background: V.bg2, overflowX: 'auto' }}>
+          <div style={{ borderTop: `1px solid ${V.line}`, background: V.bg2, overflowX: 'auto', overflowY: 'auto', maxHeight: '65vh' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-mono)', fontSize: 12, tableLayout: 'fixed' }}>
-              <thead>
+              <thead style={{ position: 'sticky', top: 0, zIndex: 3 }}>
                 <tr>
                   <th style={{ width: 72, textAlign: 'left', paddingLeft: 16, padding: '10px 6px', background: V.surface, color: V.muted, fontWeight: 600, fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', borderBottom: `1px solid ${V.line}`, borderRight: `1px solid ${V.line}` }}>Round</th>
                   {players.map((p, pi) => (
@@ -287,10 +296,12 @@ export default function PlayingScreen({
                     </td>
                   ))}
                 </tr>
+              </tbody>
+              <tfoot style={{ position: 'sticky', bottom: 0, zIndex: 2 }}>
                 <tr>
-                  <td style={{ padding: '10px 6px', paddingLeft: 16, background: V.surface, fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, fontWeight: 600, borderRight: `1px solid ${V.line}` }}>TOTAL</td>
+                  <td style={{ padding: '10px 6px', paddingLeft: 16, background: V.surface, fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, fontWeight: 600, borderRight: `1px solid ${V.line}`, borderTop: `1px solid ${V.line}` }}>TOTAL</td>
                   {players.map((p, pi) => (
-                    <td key={p.id} style={{ padding: '10px 6px', background: V.surface, textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17, color: p.id === leaderId ? V.accent : V.ink, borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none' }}>
+                    <td key={p.id} style={{ padding: '10px 6px', background: V.surface, textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17, color: totalColor(totals[p.id], minTotal, maxTotal), borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none', borderTop: `1px solid ${V.line}` }}>
                       {totals[p.id]}
                     </td>
                   ))}
@@ -303,7 +314,7 @@ export default function PlayingScreen({
                     </td>
                   ))}
                 </tr>
-              </tbody>
+              </tfoot>
             </table>
           </div>
           {completedRounds.length > 5 && (

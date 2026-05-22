@@ -214,8 +214,17 @@ function ProgressionChart({ players, rounds, variant, hiddenPlayers, winner }) {
   )
 }
 
+function totalColor(score, min, max) {
+  if (max === min) return V.ink
+  const t = (score - min) / (max - min)
+  return `color-mix(in oklab, ${V.accent3} ${Math.round(t * 100)}%, ${V.accent2})`
+}
+
 // ── Full running tab ───────────────────────────────────────────────────────────
 function RunningTab({ players, rounds, totals, ranks, variant, winnerId }) {
+  const totalScores = players.map(p => totals[p.id])
+  const minTotal = Math.min(...totalScores)
+  const maxTotal = Math.max(...totalScores)
   return (
     <section style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 20, overflow: 'hidden' }}>
       <div style={{ padding: '16px 22px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
@@ -229,9 +238,9 @@ function RunningTab({ players, rounds, totals, ranks, variant, winnerId }) {
           Made <span style={{ color: V.accent3 }}>●</span> · Missed <span style={{ color: V.accent2 }}>●</span>
         </span>
       </div>
-      <div style={{ borderTop: `1px solid ${V.line}`, overflowX: 'auto' }}>
+      <div style={{ borderTop: `1px solid ${V.line}`, overflowX: 'auto', overflowY: 'auto', maxHeight: '75vh' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-mono)', fontSize: 12, tableLayout: 'fixed' }}>
-          <thead>
+          <thead style={{ position: 'sticky', top: 0, zIndex: 3 }}>
             <tr>
               <th style={{ width: 72, textAlign: 'left', paddingLeft: 16, padding: '10px 6px', background: V.bg2, color: V.muted, fontWeight: 600, fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', borderBottom: `1px solid ${V.line}`, borderRight: `1px solid ${V.line}` }}>Round</th>
               {players.map((p, pi) => (
@@ -266,10 +275,12 @@ function RunningTab({ players, rounds, totals, ranks, variant, winnerId }) {
                 </tr>
               )
             })}
+          </tbody>
+          <tfoot style={{ position: 'sticky', bottom: 0, zIndex: 2 }}>
             <tr>
-              <td style={{ padding: '10px 6px', paddingLeft: 16, background: V.surface, fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, fontWeight: 600, borderRight: `1px solid ${V.line}` }}>TOTAL</td>
+              <td style={{ padding: '10px 6px', paddingLeft: 16, background: V.surface, fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, fontWeight: 600, borderRight: `1px solid ${V.line}`, borderTop: `1px solid ${V.line}` }}>TOTAL</td>
               {players.map((p, pi) => (
-                <td key={p.id} style={{ padding: '10px 6px', background: V.surface, textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17, color: p.id === winnerId ? V.accent : V.ink, borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none' }}>
+                <td key={p.id} style={{ padding: '10px 6px', background: V.surface, textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17, color: totalColor(totals[p.id], minTotal, maxTotal), borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none', borderTop: `1px solid ${V.line}` }}>
                   {totals[p.id]}
                 </td>
               ))}
@@ -282,7 +293,7 @@ function RunningTab({ players, rounds, totals, ranks, variant, winnerId }) {
                 </td>
               ))}
             </tr>
-          </tbody>
+          </tfoot>
         </table>
       </div>
     </section>
