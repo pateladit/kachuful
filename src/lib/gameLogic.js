@@ -20,7 +20,7 @@ export const PLAYER_COLORS = [
 // id matches the trump_suit values stored in the rounds table.
 export const TRUMPS = [
   { id: 'spades',   glyph: '♠', name: 'Ka',       label: 'Spades · Ka',    red: false, nt: false },
-  { id: 'diamonds', glyph: '♦', name: 'Chu',      label: 'Diamonds · Chu', red: true,  nt: false },
+  { id: 'diamonds', glyph: '♦', name: 'Cha',      label: 'Diamonds · Cha', red: true,  nt: false },
   { id: 'clubs',    glyph: '♣', name: 'Fu',       label: 'Clubs · Fu',     red: false, nt: false },
   { id: 'hearts',   glyph: '♥', name: 'Laal',     label: 'Hearts · Laal',  red: true,  nt: false },
   { id: 'none',     glyph: '⚬', name: 'No Trump', label: 'NT',             red: false, nt: true  },
