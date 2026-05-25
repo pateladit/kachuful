@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import Avatar from './Avatar'
 import GameTimer from './GameTimer'
 import SummaryModal from './SummaryModal'
@@ -28,37 +28,17 @@ export default function ResultsEntry({
   roundNumber, trump, dealerIdx,
   lockResults, endGame,
 }) {
-  const n = players.length
-  const bidOrder = Array.from({ length: n }, (_, i) => (dealerIdx + 1 + i) % n)
-
   const [took, setTook] = useState({})
   const [flashIds, setFlashIds] = useState({})
   const [saving, setSaving] = useState(false)
   const [summaryOpen, setSummaryOpen] = useState(false)
-  const [activeIdx, setActiveIdx] = useState(bidOrder[0] ?? 0)
-  const advanceTookTimerRef = useRef(null)
 
   const variant = game.scoring_variant
   const cards = pendingRound?.cards ?? 0
 
-  function handleChipClick(playerIdx) {
-    if (advanceTookTimerRef.current) {
-      clearTimeout(advanceTookTimerRef.current)
-      advanceTookTimerRef.current = null
-    }
-    setActiveIdx(playerIdx)
-  }
-
   function setPlayerTook(playerId, val) {
-    // Compute updated took synchronously for next-player search
-    const updatedTook = { ...took }
-    if (val === undefined) delete updatedTook[playerId]
-    else updatedTook[playerId] = val
-
-    setTook(updatedTook)
-
+    setTook(cur => ({ ...cur, [playerId]: val }))
     if (val !== undefined) {
-      // Flash animation
       const bid = pendingRound.bids[playerId]
       const flashKey = val === bid ? 'made' : 'miss'
       setFlashIds(cur => ({ ...cur, [playerId]: flashKey }))
@@ -69,28 +49,6 @@ export default function ResultsEntry({
           return out
         })
       }, 1000)
-
-      // Find next pending player in bid order
-      const playerIdx = players.findIndex(p => p.id === playerId)
-      const bidOrderPos = bidOrder.indexOf(playerIdx)
-      let next = null
-      for (let i = 1; i <= n; i++) {
-        const nextPos = (bidOrderPos + i) % n
-        const nextIdx = bidOrder[nextPos]
-        const nextPlayer = players[nextIdx]
-        if (nextPlayer && updatedTook[nextPlayer.id] === undefined) {
-          next = nextIdx
-          break
-        }
-      }
-
-      if (advanceTookTimerRef.current) {
-        clearTimeout(advanceTookTimerRef.current)
-      }
-      advanceTookTimerRef.current = setTimeout(() => {
-        setActiveIdx(next)
-        advanceTookTimerRef.current = null
-      }, 350)
     }
   }
 
@@ -146,6 +104,7 @@ export default function ResultsEntry({
     setSaving(true)
     try {
       await lockResults(took)
+      // lockResults transitions phase → 'bidding'; this component unmounts
     } catch {
       setSaving(false)
     }
@@ -155,11 +114,6 @@ export default function ResultsEntry({
     setSummaryOpen(false)
     try { await endGame() } catch (_) {}
   }
-
-  // Spotlight player data
-  const activePlayer = activeIdx !== null ? players[activeIdx] : null
-  const activeBid = activePlayer ? (pendingRound?.bids[activePlayer.id] ?? 0) : 0
-  const activeTaken = activePlayer ? took[activePlayer.id] : undefined
 
   return (
     <>
@@ -234,176 +188,108 @@ export default function ResultsEntry({
           </div>
         </section>
 
-        {/* ─── Spotlight entry ─── */}
-        <section style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 20, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-
-          {/* Chips strip */}
-          <div style={{ padding: '10px 14px', borderBottom: `1px solid ${V.line}`, display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', flex: 1 }}>
-              {bidOrder.map((playerIdx) => {
-                const p = players[playerIdx]
-                const taken = took[p.id]
-                const bid = pendingRound?.bids[p.id] ?? 0
-                const isActive = activeIdx === playerIdx
-                const isDone = taken !== undefined
-                const made = isDone && taken === bid
-                const isDealer = playerIdx === dealerIdx
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => handleChipClick(playerIdx)}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 7,
-                      padding: '6px 12px', borderRadius: 999, flexShrink: 0,
-                      background: isActive
-                        ? `color-mix(in oklab, ${V.accent} 18%, ${V.bg2})`
-                        : isDone
-                          ? made
-                            ? `color-mix(in oklab, ${V.accent3} 14%, ${V.bg2})`
-                            : `color-mix(in oklab, ${V.accent2} 12%, ${V.bg2})`
-                          : 'transparent',
-                      border: `1.5px solid ${isActive ? V.accent : isDone ? (made ? `color-mix(in oklab, ${V.accent3} 55%, transparent)` : `color-mix(in oklab, ${V.accent2} 45%, transparent)`) : V.line}`,
-                      cursor: 'pointer',
-                      opacity: !isActive && !isDone ? 0.4 : 1,
-                      transition: 'all .15s ease',
-                    }}
-                  >
-                    <Avatar player={p} size={22} isDealer={isDealer} />
-                    <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13, color: isActive || isDone ? V.ink : V.muted, whiteSpace: 'nowrap' }}>
-                      {p.displayName}
-                    </span>
-                    {isDone ? (
-                      <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17, color: made ? V.accent3 : V.accent2, letterSpacing: '-0.02em' }}>
-                        {taken}
-                      </span>
-                    ) : isActive ? (
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: V.accent, display: 'inline-block', flexShrink: 0 }} />
-                    ) : null}
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Sum pill */}
-            <div style={{ flexShrink: 0, marginLeft: 4 }}>
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.08em',
-                padding: '5px 11px', borderRadius: 999,
-                background: sumStatus === 'over' ? `color-mix(in oklab, ${V.accent2} 20%, transparent)` : sumStatus === 'exact' ? `color-mix(in oklab, ${V.accent3} 20%, transparent)` : V.bg2,
-                color: sumStatus === 'over' ? V.accent2 : sumStatus === 'exact' ? V.accent3 : V.ink2,
-                border: `1px solid ${sumStatus === 'over' ? `color-mix(in oklab, ${V.accent2} 45%, transparent)` : sumStatus === 'exact' ? `color-mix(in oklab, ${V.accent3} 45%, transparent)` : V.line}`,
-              }}>
-                <b style={{ fontFamily: 'var(--font-display)', fontSize: 14, letterSpacing: '-0.01em' }}>{sumOfTricks}</b>
-                <span style={{ opacity: 0.6 }}>/{cards}</span>
-                <span style={{ opacity: 0.5, fontSize: 9 }}>·</span>
-                <span style={{ fontSize: 10 }}>{entered < players.length ? `${players.length - entered} left` : sumStatus === 'exact' ? 'exact ✓' : sumStatus === 'over' ? `+${sumOverBy} over` : `${cards - sumOfTricks} short`}</span>
-              </div>
-            </div>
+        {/* ─── Per-player entry grid ─── */}
+        <section style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 20, padding: '20px 24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 18, color: V.ink, margin: 0 }}>
+              Tricks taken
+              <small style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, letterSpacing: '.14em', textTransform: 'uppercase', marginLeft: 10, fontWeight: 500 }}>
+                tap the number each player ended with · sum must equal {cards}
+              </small>
+            </h2>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.muted }}>Bids shown · results lock as you enter</div>
           </div>
 
-          {/* Spotlight card */}
-          {activePlayer ? (
-            <div style={{
-              padding: '28px 32px 22px',
-              background: `color-mix(in oklab, ${activePlayer.color} 6%, transparent)`,
-              flex: 1,
-            }}>
-              {/* Player header */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 18 }}>
-                <Avatar player={activePlayer} size={72} isDealer={activeIdx === dealerIdx} glow />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 30, color: V.ink, letterSpacing: '-0.02em', lineHeight: 1 }}>
-                    {activePlayer.displayName}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+            {players.map((p, i) => {
+              const bid = pendingRound?.bids[p.id] ?? 0
+              const taken = took[p.id]
+              const isSet = taken !== undefined
+              const made = isSet && taken === bid
+              const flash = flashIds[p.id]
+              const earned = isSet ? scoreFor(bid, taken, variant) : 0
+
+              let tileStyle = {
+                background: V.bg2,
+                border: `1px solid ${V.line}`,
+                borderRadius: 16,
+                padding: '16px 18px',
+                position: 'relative',
+              }
+              if (isSet) {
+                tileStyle.border = `1px solid ${made ? `color-mix(in oklab, ${V.accent3} 50%, transparent)` : `color-mix(in oklab, ${V.accent2} 50%, transparent)`}`
+                tileStyle.background = made ? `color-mix(in oklab, ${V.accent3} 12%, ${V.bg2})` : `color-mix(in oklab, ${V.accent2} 12%, ${V.bg2})`
+              } else if (i === dealerIdx) {
+                tileStyle.border = `1px solid ${V.accent}`
+                tileStyle.background = `color-mix(in oklab, ${V.accent} 8%, ${V.bg2})`
+              }
+
+              return (
+                <div
+                  key={p.id}
+                  className={flash === 'made' ? 'flash-made' : flash === 'miss' ? 'flash-miss' : ''}
+                  style={tileStyle}
+                >
+                  {i === dealerIdx && (
+                    <div style={{ position: 'absolute', top: 10, right: 12, fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.16em', textTransform: 'uppercase', background: `color-mix(in oklab, ${V.accent} 22%, transparent)`, color: V.accent, padding: '3px 8px', borderRadius: 999, fontWeight: 700 }}>DEALER</div>
+                  )}
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <Avatar player={p} size={32} isDealer={i === dealerIdx} />
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, color: V.ink }}>{p.displayName}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', color: V.muted }}>
+                        {i === dealerIdx ? 'DEALER' : `POSITION ${i + 1}`}
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    {activeIdx === dealerIdx && (
-                      <span style={{ background: `color-mix(in oklab, ${V.accent} 22%, transparent)`, color: V.accent, padding: '2px 8px', borderRadius: 999, fontWeight: 700, fontSize: 9, letterSpacing: '.16em' }}>DEALER</span>
-                    )}
-                    <span>
-                      {activeTaken !== undefined
-                        ? activeTaken === activeBid ? '● MADE' : '● MISSED'
-                        : 'Tap tricks taken'}
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted }}>Bid</span>
+                    <b style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: bid === 0 ? V.accent3 : V.ink }}>
+                      {bid}
+                    </b>
+                  </div>
+
+                  {/* Number pad */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }} onClick={e => e.stopPropagation()}>
+                    {Array.from({ length: cards + 1 }).map((_, n) => (
+                      <button
+                        key={n}
+                        onClick={() => setPlayerTook(p.id, taken === n ? undefined : n)}
+                        style={{
+                          width: 36, height: 36,
+                          borderRadius: 8,
+                          border: taken === n
+                            ? `2px solid ${made ? V.accent3 : V.accent2}`
+                            : `1px solid ${V.line}`,
+                          background: taken === n
+                            ? (made ? `color-mix(in oklab, ${V.accent3} 25%, ${V.surface})` : `color-mix(in oklab, ${V.accent2} 25%, ${V.surface})`)
+                            : V.surface,
+                          color: taken === n ? (made ? V.accent3 : V.accent2) : V.ink,
+                          fontFamily: 'var(--font-mono)',
+                          fontWeight: taken === n ? 700 : 500,
+                          fontSize: 14,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, paddingTop: 8, borderTop: `1px solid ${V.line}` }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700, color: isSet ? (made ? V.accent3 : V.accent2) : V.muted }}>
+                      {isSet ? (made ? '● MADE' : '● MISSED') : '● PENDING'}
+                    </span>
+                    <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: isSet ? (made ? V.accent3 : V.accent2) : V.muted }}>
+                      {isSet ? (made ? `+${earned}` : '0') : '—'}
                     </span>
                   </div>
                 </div>
-                {/* Bid indicator */}
-                <div style={{ textAlign: 'center', flexShrink: 0, background: V.bg2, border: `1px solid ${V.line}`, borderRadius: 12, padding: '10px 18px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, marginBottom: 4 }}>BID</div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 36, color: activeBid === 0 ? V.accent3 : V.ink, letterSpacing: '-0.03em', lineHeight: 1 }}>
-                    {activeBid}
-                  </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.accent3, marginTop: 4, letterSpacing: '.08em' }}>← make this</div>
-                </div>
-                {activeTaken !== undefined && (
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 52, color: activeTaken === activeBid ? V.accent3 : V.accent2, letterSpacing: '-0.03em', lineHeight: 1 }}>
-                      {activeTaken}
-                    </div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: activeTaken === activeBid ? V.accent3 : V.accent2, letterSpacing: '.12em', textTransform: 'uppercase', marginTop: 4 }}>
-                      {activeTaken === activeBid ? 'MADE' : 'MISSED'}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Number buttons */}
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {Array.from({ length: cards + 1 }, (_, num) => {
-                  const isSelected = activeTaken === num
-                  const isMake = num === activeBid
-                  return (
-                    <button
-                      key={num}
-                      onClick={() => setPlayerTook(activePlayer.id, activeTaken === num ? undefined : num)}
-                      style={{
-                        flex: '1 0 auto',
-                        minWidth: 56,
-                        height: 64,
-                        borderRadius: 12,
-                        background: isSelected
-                          ? (isMake ? `color-mix(in oklab, ${V.accent3} 35%, ${V.surface})` : `color-mix(in oklab, ${V.accent2} 35%, ${V.surface})`)
-                          : isMake
-                            ? `color-mix(in oklab, ${V.accent3} 10%, ${V.bg2})`
-                            : V.bg2,
-                        border: isSelected
-                          ? `2px solid ${isMake ? V.accent3 : V.accent2}`
-                          : isMake
-                            ? `1.5px solid color-mix(in oklab, ${V.accent3} 50%, transparent)`
-                            : `1px solid ${V.line}`,
-                        color: isSelected
-                          ? (isMake ? V.accent3 : V.accent2)
-                          : isMake
-                            ? V.accent3
-                            : V.ink2,
-                        fontFamily: 'var(--font-mono)',
-                        fontWeight: 700,
-                        fontSize: 22,
-                        cursor: 'pointer',
-                        fontFeatureSettings: '"tnum"',
-                        transition: 'background .12s ease',
-                      }}
-                    >
-                      {num}
-                    </button>
-                  )
-                })}
-              </div>
-
-              <div style={{ marginTop: 14, fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, letterSpacing: '.08em', textAlign: 'center' }}>
-                Advances automatically · tap any chip to go back and edit
-              </div>
-            </div>
-          ) : (
-            <div style={{ padding: '48px 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24, color: V.accent3 }}>
-                {allValid ? 'All results in!' : 'All players entered'}
-              </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.muted }}>
-                {allValid ? 'Tap a chip to edit · lock the round below.' : 'Tricks don\'t add up yet — tap a chip to fix.'}
-              </div>
-            </div>
-          )}
+              )
+            })}
+          </div>
         </section>
 
         {/* ─── MVP + leaderboard ─── */}

@@ -18,8 +18,10 @@ Three supported login paths, all land on `/history` after success:
 2. **Email + password** — traditional
 3. **Anonymous / guest** — host enters just their display name, no account needed.
    Supabase anonymous auth creates a real session persisted in localStorage.
-   Data survives browser restarts on the same device. Acceptable data loss if
-   they clear the browser or switch devices (no upgrade prompt planned).
+   Data survives browser restarts on the same device.
+   - Anonymous users can upgrade to a full account via `/preferences` (email/password or Google link)
+   - A dismissible amber banner appears on `/` after ≥2 complete games prompting upgrade
+   - `localStorage` key `kachuful-banner-dismissed` persists the dismiss
 
 ## Game Rules
 
@@ -138,7 +140,7 @@ remains correct even if the scoring_variant is ever corrected on the game row.
 
 ## Design System
 
-**Theme**: Lantern (dark only)
+**Themes**: Lantern (dark, default) and Mehfil (light). Toggled via `/preferences`, persisted in `localStorage` key `kachuful-theme`. Applied as `data-theme` attribute on `<html>`.
 
 ### Color Palette — CSS variables
 
@@ -182,29 +184,18 @@ Load via Google Fonts in `index.html`.
 Register the Lantern palette as Tailwind v4 theme tokens in `src/index.css`
 so classes like `bg-bg`, `text-ink`, `border-line` work throughout the app.
 
-## Design Handoff Files
+## Pages & Routes
 
-Located in `KA-CHU-FU-L/project/`:
+| Route | Component | Notes |
+|-------|-----------|-------|
+| `/` | `Home.jsx` | Game setup — player roster, scoring variant, rules config, cut-for-dealer |
+| `/game/:id` | `Game.jsx` | Phase router: loading → bidding (`BidEntry`) → playing (`PlayingScreen` + `ResultsEntry`) → complete |
+| `/game/:id/final` | `FinalResults.jsx` | Standings, score-progression chart, full running tab |
+| `/history` | `History.jsx` | Per-user game history with stats |
+| `/preferences` | `Preferences.jsx` | Theme toggle (Lantern/Mehfil); account upgrade for anonymous users |
+| `/admin` | `Admin.jsx` | All-games view; guarded by `profiles.is_admin = true` |
 
-| File | Purpose |
-|------|---------|
-| `design-system.html` | Full color + typography + component reference |
-| `setup.html` | Game creation page |
-| `bid-entry.html` | Bidding phase |
-| `game-in-play.html` | Active round / waiting state |
-| `round-results.html` + `.jsx` | Results entry (near-complete React component) |
-| `final-results.html` + `.jsx` | End-game scoreboard (near-complete React component) |
-| `summary-modal.jsx` + `.css` | In-game summary overlay (reusable) |
-| `game-data.js` | Scoring logic + timer helpers (extract to `src/lib/gameLogic.js`) |
-| `tweaks-panel.jsx` | Design-time debug panel — do NOT ship in production |
-
-### Integrating handoff JSX
-
-`round-results.jsx` and `final-results.jsx` are standalone React apps (call
-`ReactDOM.createRoot` themselves). They must be refactored into page components
-that receive game state from the router + Supabase. The logic stays; the shell
-changes. `game-data.js` pure functions should be extracted to `src/lib/gameLogic.js`
-with the hardcoded test data stripped out.
+Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>'` in Supabase SQL editor. Migration in `supabase/add_is_admin.sql`.
 
 ## Completed Sessions
 
@@ -234,13 +225,12 @@ with the hardcoded test data stripped out.
   status badge; clicking any game navigates to `/game/:id/final` (complete) or
   `/game/:id` (in progress)
 
-## Remaining Sessions
-
-*(none — all sessions complete)*
-
-## Planned Improvements
-
-*(none — all planned improvements complete)*
+- **Post-session work** — responsive layout (two-column `Home.jsx` at ≥1024px,
+  wider `History.jsx`, overflow-x scroll on `FinalResults` standings table);
+  Mehfil light theme + `useTheme` hook; anonymous account upgrade flow (`Preferences.jsx`,
+  dismissible banner on `Home.jsx`); `isAdmin` support with `Admin.jsx` and
+  `supabase/add_is_admin.sql` migration; `AccountMenu` wired to Preferences/Admin;
+  spotlight carousel entry for `BidEntry` (chips strip + auto-advance spotlight card)
 
 ## Deferred / Future
 

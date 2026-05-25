@@ -10,3 +10,8 @@ dist/
 
 # editor
 .DS_Store
+.vercel
+
+# design handoff files (local reference only)
+ka-chu-fu-l/
+*.zip
