@@ -325,6 +325,14 @@ export default function StatsModal({ open, onClose, game, players, completedRoun
                   )
                 })}
               </div>
+              <div style={{ marginTop: 12, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, lineHeight: 1.5 }}>
+                  <b style={{ color: V.ink2 }}>Risk appetite</b> — avg bid as % of cards dealt. Higher = more aggressive bidder.
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, lineHeight: 1.5 }}>
+                  <b style={{ color: V.ink2 }}>Bid drift</b> — avg (bid − took) per round. Positive = tends to overbid; negative = tends to underbid; near 0 = well-calibrated.
+                </div>
+              </div>
             </Section>
           </>
         )}
