@@ -4,6 +4,8 @@ import { useHistory } from '../hooks/useHistory'
 import Avatar from '../components/game/Avatar'
 import AccountMenu from '../components/AccountMenu'
 import { disambiguateInitials } from '../lib/gameLogic'
+import StatsModal from '../components/game/StatsModal'
+import { useState } from 'react'
 
 const V = {
   bg:      'var(--color-bg, #2a1620)',
@@ -47,12 +49,30 @@ function processGame(g) {
   }))
 
   const playerCount = normPlayers.length
-  const completedRounds = g.rounds.filter(r => r.round_results.length === playerCount)
+
+  // Normalize rounds into the same shape StatsModal expects
+  const normRounds = g.rounds.map(r => {
+    const bids = {}
+    for (const b of r.bids) bids[b.game_player_id] = b.bid
+    const took = {}
+    for (const rr of r.round_results) took[rr.game_player_id] = rr.tricks_won
+    const isComplete = r.round_results.length === playerCount
+    return {
+      id: r.id,
+      roundNumber: r.round_number,
+      cards: r.cards_dealt,
+      trump: r.trump_suit,
+      dealerId: r.dealer_id,
+      bids,
+      took: isComplete ? took : null,
+    }
+  })
+  const completedRounds = normRounds.filter(r => r.took !== null)
 
   const totals = {}
   for (const p of normPlayers) totals[p.id] = 0
   for (const r of completedRounds) {
-    for (const rr of r.round_results) {
+    for (const rr of g.rounds.find(raw => raw.id === r.id)?.round_results ?? []) {
       totals[rr.game_player_id] = (totals[rr.game_player_id] ?? 0) + rr.score
     }
   }
@@ -63,12 +83,13 @@ function processGame(g) {
   return {
     id: g.id,
     name: g.name,
+    scoringVariant: g.scoring_variant,
     status: g.status,
     startedAt: g.started_at,
     endedAt: g.ended_at,
     createdAt: g.created_at,
     players: normPlayers,
-    rounds: g.rounds,
+    completedRounds,
     completedRoundCount: completedRounds.length,
     totals,
     sorted,
@@ -139,7 +160,7 @@ function StatCard({ label, value, sub, accent }) {
 }
 
 // ── Game card ─────────────────────────────────────────────────────────────────
-function GameCard({ rawGame, onOpen }) {
+function GameCard({ rawGame, onOpen, onStats }) {
   const pg = processGame(rawGame)
   const { id, name, status, startedAt, endedAt, createdAt, players, completedRoundCount, totals, sorted, winner } = pg
   const isComplete = status === 'complete'
@@ -223,9 +244,19 @@ function GameCard({ rawGame, onOpen }) {
             Round {completedRoundCount + 1} in progress
           </div>
         )}
-        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, color: isComplete ? V.accent : V.ink2, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          {isComplete ? 'View final results' : 'Continue game'} →
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {completedRoundCount > 0 && (
+            <button
+              onClick={e => { e.stopPropagation(); onStats(pg) }}
+              style={{ background: 'transparent', border: `1px solid ${V.line}`, borderRadius: 10, padding: '6px 12px', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', color: V.ink2, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+            >
+              <span style={{ fontSize: 11 }}>⊞</span> Stats
+            </button>
+          )}
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, color: isComplete ? V.accent : V.ink2, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            {isComplete ? 'View final results' : 'Continue game'} →
+          </span>
+        </div>
       </div>
     </div>
   )
@@ -236,6 +267,7 @@ export default function History() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const { games, loading, error, reload } = useHistory()
+  const [statsGame, setStatsGame] = useState(null)
 
   const stats = computeStats(games, user?.id)
 
@@ -329,9 +361,24 @@ export default function History() {
       {!loading && !error && games.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {games.map(g => (
-            <GameCard key={g.id} rawGame={g} onOpen={() => openGame(g)} />
+            <GameCard
+              key={g.id}
+              rawGame={g}
+              onOpen={() => openGame(g)}
+              onStats={pg => setStatsGame(pg)}
+            />
           ))}
         </div>
+      )}
+
+      {statsGame && (
+        <StatsModal
+          open
+          onClose={() => setStatsGame(null)}
+          game={{ name: statsGame.name, scoring_variant: statsGame.scoringVariant }}
+          players={statsGame.players}
+          completedRounds={statsGame.completedRounds}
+        />
       )}
     </div>
   )

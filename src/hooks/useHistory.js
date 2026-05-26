@@ -23,7 +23,7 @@ export function useHistory() {
           id, name, scoring_variant, status, started_at, ended_at, created_at,
           game_players ( id, display_name, color, seat_order, user_id ),
           rounds (
-            id,
+            id, round_number, cards_dealt, trump_suit, dealer_id,
             bids ( game_player_id, bid ),
             round_results ( game_player_id, tricks_won, score )
           )
