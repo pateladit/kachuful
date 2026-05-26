@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useGame } from '../hooks/useGame'
 import Avatar from '../components/game/Avatar'
+import StatsModal from '../components/game/StatsModal'
 import confetti from 'canvas-confetti'
 import {
   TRUMPS,
@@ -333,6 +334,7 @@ export default function FinalResults() {
   const { game, players, completedRounds, phase, error, reload } = useGame(id)
   const [hiddenPlayers, setHiddenPlayers] = useState({})
   const [shareOpen, setShareOpen] = useState(false)
+  const [statsOpen, setStatsOpen] = useState(false)
   const shareRef = useRef(null)
 
   // Confetti fires once when a recently-ended game loads
@@ -453,6 +455,13 @@ export default function FinalResults() {
             <b style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, letterSpacing: '-0.01em', color: V.ink }}>{elapsedStr}</b>
             <span>elapsed</span>
           </div>
+          {/* Stats button */}
+          <button
+            onClick={() => setStatsOpen(true)}
+            style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 12, padding: '7px 14px', fontFamily: 'var(--font-body)', fontSize: 13, color: V.ink2, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <span style={{ fontSize: 13 }}>⊞</span> Stats
+          </button>
           {/* Share button */}
           <div style={{ position: 'relative' }}>
             <button
@@ -668,6 +677,14 @@ export default function FinalResults() {
           ← Back to setup
         </button>
       </footer>
+
+      <StatsModal
+        open={statsOpen}
+        onClose={() => setStatsOpen(false)}
+        game={game}
+        players={players}
+        completedRounds={completedRounds}
+      />
     </div>
   )
 }
