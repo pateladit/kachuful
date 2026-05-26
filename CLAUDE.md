@@ -240,7 +240,20 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
   podium (2nd | 1st | 3rd), share dropdown (copy link / Share via… / download PNG /
   print PDF); rank conditional formatting (`rankBg` green→red by rank) applied to TOTAL
   + RANK footer rows in `PlayingScreen`, `BidEntry` (new RANK row added), `ResultsEntry`
-  standings, and `FinalResults` RunningTab + standings table
+  standings, and `FinalResults` RunningTab + standings table; `AccountMenu` added to
+  all 3 in-game screen headers; fixed missing `/` in BidEntry running tab bid/took subtext
+
+- **Session 9** — `StatsModal` component (`src/components/game/StatsModal.jsx`) with
+  5 sections: zero-bid performance (overall + ≤4/5+ card split), accuracy by card count
+  (per-count breakdown + 1–4/5+ grouped), dealer burden (times dealt + accuracy as dealer),
+  best streaks (made/missed), and fun stats (best single round, trump affinity, risk
+  appetite, bid drift); glossary for risk appetite and bid drift below fun stats section;
+  new stat functions in `gameLogic.js`: `nilBidStats`, `cardCountStats`, `dealerBurden`,
+  `bestRoundScore`, `favoriteTrump`, `avgBidRatio`, `netBidDrift`; `rankBg` added to
+  `SummaryModal` TOTAL/RANK rows (was missing); Stats button (⊞) wired into `BidEntry`,
+  `PlayingScreen`, `ResultsEntry`, `FinalResults`, and per-game-card in `History`;
+  `useHistory` updated to fetch `round_number, cards_dealt, trump_suit, dealer_id` so
+  rounds can be normalized to StatsModal format from the history page
 
 ## Deferred / Future
 
