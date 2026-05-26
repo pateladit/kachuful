@@ -68,8 +68,8 @@ function findOvertakeRound(winner, players, rounds, variant) {
 function rankBg(rank, n) {
   if (n <= 1 || !rank) return 'transparent'
   const t = (rank - 1) / (n - 1)
-  const base = `color-mix(in oklab, #fb923c ${Math.round(t * 100)}%, #22d3ee)`
-  return `color-mix(in oklab, ${base} 28%, transparent)`
+  const base = `color-mix(in oklab, #ef4444 ${Math.round(t * 100)}%, #22c55e)`
+  return `color-mix(in oklab, ${base} 40%, transparent)`
 }
 
 // ── Progression chart ─────────────────────────────────────────────────────────
