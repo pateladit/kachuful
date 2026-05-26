@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import Avatar from './Avatar'
 import GameTimer from './GameTimer'
 import SummaryModal from './SummaryModal'
+import AccountMenu from '../AccountMenu'
 import { TRUMPS, computeTotals, computeRanks, scoreFor } from '../../lib/gameLogic'
 
 const V = {
@@ -27,8 +28,8 @@ function formatRank(rk) {
 function rankBg(rank, n) {
   if (n <= 1 || !rank) return 'transparent'
   const t = (rank - 1) / (n - 1)
-  const base = `color-mix(in oklab, ${V.accent2} ${Math.round(t * 100)}%, ${V.accent3})`
-  return `color-mix(in oklab, ${base} 20%, transparent)`
+  const base = `color-mix(in oklab, #fb923c ${Math.round(t * 100)}%, #22d3ee)`
+  return `color-mix(in oklab, ${base} 28%, transparent)`
 }
 
 const SCORING_LABELS = {
@@ -239,7 +240,7 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
             </button>
           </div>
 
-          {/* Mini leaderboard */}
+          {/* Mini leaderboard + account menu */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
             {sorted.slice(0, 3).map((p, i) => (
               <div
@@ -264,6 +265,7 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
                 <b style={{ color: i === 0 ? V.accent : V.ink, fontFamily: 'var(--font-mono)', fontSize: 13 }}>{totals[p.id]}</b>
               </div>
             ))}
+            <AccountMenu />
           </div>
         </header>
 
@@ -565,7 +567,7 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
                                 {pts === null ? '—' : made ? `+${pts}` : '0'}
                               </span>
                               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.ink2, opacity: .75, marginTop: 2 }}>
-                                {b !== undefined ? b : '—'}<span style={{ color: V.muted }}/>{k !== undefined ? k : '—'}
+                                {b !== undefined ? b : '—'}/{k !== undefined ? k : '—'}
                               </span>
                             </div>
                           </td>

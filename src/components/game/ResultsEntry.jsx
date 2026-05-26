@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Avatar from './Avatar'
 import GameTimer from './GameTimer'
 import SummaryModal from './SummaryModal'
+import AccountMenu from '../AccountMenu'
 import { TRUMPS, computeTotals, computeRanks, scoreFor } from '../../lib/gameLogic'
 
 const V = {
@@ -26,8 +27,8 @@ function formatRank(rk) {
 function rankBg(rank, n) {
   if (n <= 1 || !rank) return 'transparent'
   const t = (rank - 1) / (n - 1)
-  const base = `color-mix(in oklab, ${V.accent2} ${Math.round(t * 100)}%, ${V.accent3})`
-  return `color-mix(in oklab, ${base} 20%, transparent)`
+  const base = `color-mix(in oklab, #fb923c ${Math.round(t * 100)}%, #22d3ee)`
+  return `color-mix(in oklab, ${base} 28%, transparent)`
 }
 
 export default function ResultsEntry({
@@ -155,6 +156,7 @@ export default function ResultsEntry({
                 <b style={{ color: i === 0 ? V.accent : V.ink, fontSize: 13 }}>{totalsAfter[p.id]}</b>
               </div>
             ))}
+            <AccountMenu />
           </div>
         </header>
 
