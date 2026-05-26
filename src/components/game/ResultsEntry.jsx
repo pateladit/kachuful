@@ -264,6 +264,12 @@ export default function ResultsEntry({
                     <b style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: bid === 0 ? V.accent3 : V.ink }}>
                       {bid}
                     </b>
+                    <button
+                      onClick={() => setPlayerTook(p.id, bid)}
+                      style={{ marginLeft: 'auto', background: `color-mix(in oklab, ${V.accent3} 15%, ${V.surface})`, border: `1px solid color-mix(in oklab, ${V.accent3} 40%, transparent)`, borderRadius: 8, padding: '4px 10px', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: V.accent3, cursor: 'pointer' }}
+                    >
+                      ✓ Made
+                    </button>
                   </div>
 
                   {/* Number pad */}
@@ -277,13 +283,17 @@ export default function ResultsEntry({
                           borderRadius: 8,
                           border: taken === n
                             ? `2px solid ${made ? V.accent3 : V.accent2}`
-                            : `1px solid ${V.line}`,
+                            : n === bid
+                              ? `1px solid color-mix(in oklab, ${V.accent} 60%, transparent)`
+                              : `1px solid ${V.line}`,
                           background: taken === n
                             ? (made ? `color-mix(in oklab, ${V.accent3} 25%, ${V.surface})` : `color-mix(in oklab, ${V.accent2} 25%, ${V.surface})`)
-                            : V.surface,
-                          color: taken === n ? (made ? V.accent3 : V.accent2) : V.ink,
+                            : n === bid
+                              ? `color-mix(in oklab, ${V.accent} 12%, ${V.surface})`
+                              : V.surface,
+                          color: taken === n ? (made ? V.accent3 : V.accent2) : n === bid ? V.accent : V.ink,
                           fontFamily: 'var(--font-mono)',
-                          fontWeight: taken === n ? 700 : 500,
+                          fontWeight: taken === n || n === bid ? 700 : 500,
                           fontSize: 14,
                           cursor: 'pointer',
                         }}
