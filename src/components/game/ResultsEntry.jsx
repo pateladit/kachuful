@@ -23,6 +23,13 @@ function formatRank(rk) {
   return `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'}`
 }
 
+function rankBg(rank, n) {
+  if (n <= 1 || !rank) return 'transparent'
+  const t = (rank - 1) / (n - 1)
+  const base = `color-mix(in oklab, ${V.accent2} ${Math.round(t * 100)}%, ${V.accent3})`
+  return `color-mix(in oklab, ${base} 20%, transparent)`
+}
+
 export default function ResultsEntry({
   game, players, completedRounds, pendingRound,
   roundNumber, trump, dealerIdx,
@@ -329,7 +336,7 @@ export default function ResultsEntry({
                 const gain = totalsAfter[p.id] - totalsBefore[p.id]
                 const isLeader = p.id === leaderId
                 return (
-                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: isLeader ? `color-mix(in oklab, ${V.accent} 8%, ${V.bg2})` : V.bg2, border: `1px solid ${isLeader ? `color-mix(in oklab, ${V.accent} 40%, transparent)` : V.line}`, borderRadius: 10, padding: '8px 12px' }}>
+                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: rankBg(ranksAfter[p.id]?.rank, sortedAfter.length), border: `1px solid ${V.line}`, borderRadius: 10, padding: '8px 12px' }}>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: isLeader ? V.accent : V.muted, width: 28 }}>
                       {formatRank(ranksAfter[p.id])}
                     </div>

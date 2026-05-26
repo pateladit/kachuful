@@ -18,6 +18,19 @@ const V = {
   red:     'var(--color-red-suit, #e57860)',
 }
 
+function formatRank(rk) {
+  if (!rk) return '—'
+  const n = rk.rank
+  return `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'}`
+}
+
+function rankBg(rank, n) {
+  if (n <= 1 || !rank) return 'transparent'
+  const t = (rank - 1) / (n - 1)
+  const base = `color-mix(in oklab, ${V.accent2} ${Math.round(t * 100)}%, ${V.accent3})`
+  return `color-mix(in oklab, ${base} 20%, transparent)`
+}
+
 const SCORING_LABELS = {
   1: 'Made: 10 + tricks won · Missed: 0',
   2: 'Made: 10×bid + 1 · Missed: 0',
@@ -160,6 +173,7 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
   const totals = computeTotals(players, completedRounds, variant)
   const sorted = [...players].sort((a, b) => totals[b.id] - totals[a.id])
   const leaderId = sorted[0]?.id
+  const ranks = computeRanks(players, totals)
 
   // Running tab data: last 5 completed + current round (being bid)
   const tabRounds = expanded ? completedRounds : completedRounds.slice(-5)
@@ -597,8 +611,17 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
                 <tr>
                   <td style={{ padding: '10px 6px', paddingLeft: 16, background: V.surface, fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, fontWeight: 600, borderRight: `1px solid ${V.line}` }}>TOTAL</td>
                   {players.map((p, pi) => (
-                    <td key={p.id} style={{ padding: '10px 6px', background: V.surface, textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17, color: p.id === leaderId ? V.accent : V.ink, letterSpacing: '-0.01em', borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none' }}>
+                    <td key={p.id} style={{ padding: '10px 6px', background: rankBg(ranks[p.id]?.rank, players.length), textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17, color: p.id === leaderId ? V.accent : V.ink, letterSpacing: '-0.01em', borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none' }}>
                       {totals[p.id]}
+                    </td>
+                  ))}
+                </tr>
+                {/* Rank row */}
+                <tr>
+                  <td style={{ padding: '8px 6px', paddingLeft: 16, background: V.bg2, fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, fontWeight: 600, borderRight: `1px solid ${V.line}` }}>RANK</td>
+                  {players.map((p, pi) => (
+                    <td key={p.id} style={{ padding: '8px 6px', background: rankBg(ranks[p.id]?.rank, players.length), textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 12, color: p.id === leaderId ? V.accent : V.ink2, borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none' }}>
+                      {formatRank(ranks[p.id])}
                     </td>
                   ))}
                 </tr>

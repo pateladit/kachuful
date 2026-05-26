@@ -230,7 +230,17 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
   Mehfil light theme + `useTheme` hook; anonymous account upgrade flow (`Preferences.jsx`,
   dismissible banner on `Home.jsx`); `isAdmin` support with `Admin.jsx` and
   `supabase/add_is_admin.sql` migration; `AccountMenu` wired to Preferences/Admin;
-  spotlight carousel entry for `BidEntry` (chips strip + auto-advance spotlight card)
+  `ResultsEntry` reverted to open-grid design (all players visible simultaneously)
+
+- **Session 8** — share, fanfare & rank colours: `canvas-confetti` + `html2canvas`
+  installed; `supabase/share_complete_games.sql` additive SELECT policies for complete
+  games (anyone authenticated can view `/game/:id/final`); `Game.jsx` — `GameOverSplash`
+  component fires confetti + shows winner, auto-navigates to FinalResults after 3 s;
+  `FinalResults.jsx` — confetti on load (< 10 min since end), winner hero card, top-3
+  podium (2nd | 1st | 3rd), share dropdown (copy link / Share via… / download PNG /
+  print PDF); rank conditional formatting (`rankBg` green→red by rank) applied to TOTAL
+  + RANK footer rows in `PlayingScreen`, `BidEntry` (new RANK row added), `ResultsEntry`
+  standings, and `FinalResults` RunningTab + standings table
 
 ## Deferred / Future
 

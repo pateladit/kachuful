@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useGame } from '../hooks/useGame'
 import Avatar from '../components/game/Avatar'
+import confetti from 'canvas-confetti'
 import {
   TRUMPS,
   computeTotals,
@@ -62,6 +63,13 @@ function findOvertakeRound(winner, players, rounds, variant) {
     if (okAllAfter) return n
   }
   return rounds.length
+}
+
+function rankBg(rank, n) {
+  if (n <= 1 || !rank) return 'transparent'
+  const t = (rank - 1) / (n - 1)
+  const base = `color-mix(in oklab, ${V.accent2} ${Math.round(t * 100)}%, ${V.accent3})`
+  return `color-mix(in oklab, ${base} 20%, transparent)`
 }
 
 // ── Progression chart ─────────────────────────────────────────────────────────
@@ -220,6 +228,24 @@ function totalColor(score, min, max) {
   return `color-mix(in oklab, ${V.accent3} ${Math.round(t * 100)}%, ${V.accent2})`
 }
 
+// ── Share dropdown item ────────────────────────────────────────────────────────
+function ShareItem({ label, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: 'none', border: 'none', textAlign: 'left',
+        padding: '8px 12px', borderRadius: 8, fontFamily: 'var(--font-body)',
+        fontSize: 13, color: V.ink2, cursor: 'pointer', width: '100%',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = V.bg2 }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
+    >
+      {label}
+    </button>
+  )
+}
+
 // ── Full running tab ───────────────────────────────────────────────────────────
 function RunningTab({ players, rounds, totals, ranks, variant, winnerId }) {
   const totalScores = players.map(p => totals[p.id])
@@ -280,7 +306,7 @@ function RunningTab({ players, rounds, totals, ranks, variant, winnerId }) {
             <tr>
               <td style={{ padding: '10px 6px', paddingLeft: 16, background: V.surface, fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, fontWeight: 600, borderRight: `1px solid ${V.line}`, borderTop: `1px solid ${V.line}` }}>TOTAL</td>
               {players.map((p, pi) => (
-                <td key={p.id} style={{ padding: '10px 6px', background: V.surface, textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17, color: totalColor(totals[p.id], minTotal, maxTotal), borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none', borderTop: `1px solid ${V.line}` }}>
+                <td key={p.id} style={{ padding: '10px 6px', background: rankBg(ranks[p.id]?.rank, players.length), textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17, color: totalColor(totals[p.id], minTotal, maxTotal), borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none', borderTop: `1px solid ${V.line}` }}>
                   {totals[p.id]}
                 </td>
               ))}
@@ -288,7 +314,7 @@ function RunningTab({ players, rounds, totals, ranks, variant, winnerId }) {
             <tr>
               <td style={{ padding: '8px 6px', paddingLeft: 16, background: V.bg2, fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, fontWeight: 600, borderRight: `1px solid ${V.line}` }}>RANK</td>
               {players.map((p, pi) => (
-                <td key={p.id} style={{ padding: '8px 6px', background: V.bg2, textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 12, color: p.id === winnerId ? V.accent : V.ink2, borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none' }}>
+                <td key={p.id} style={{ padding: '8px 6px', background: rankBg(ranks[p.id]?.rank, players.length), textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 12, color: p.id === winnerId ? V.accent : V.ink2, borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none' }}>
                   {formatRank(ranks[p.id])}
                 </td>
               ))}
@@ -306,6 +332,18 @@ export default function FinalResults() {
   const navigate = useNavigate()
   const { game, players, completedRounds, phase, error, reload } = useGame(id)
   const [hiddenPlayers, setHiddenPlayers] = useState({})
+  const [shareOpen, setShareOpen] = useState(false)
+  const shareRef = useRef(null)
+
+  // Confetti fires once when a recently-ended game loads
+  useEffect(() => {
+    const endedAt = game?.ended_at
+    if (!endedAt) return
+    const ageMs = Date.now() - new Date(endedAt).getTime()
+    if (ageMs < 10 * 60 * 1000) {
+      confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } })
+    }
+  }, [game?.ended_at])
 
   if (phase === 'loading') {
     return (
@@ -361,8 +399,40 @@ export default function FinalResults() {
     setHiddenPlayers(cur => ({ ...cur, [pid]: !cur[pid] }))
   }
 
+  async function copyLink() {
+    await navigator.clipboard.writeText(window.location.href)
+    setShareOpen(false)
+  }
+
+  async function shareNative() {
+    try {
+      await navigator.share({ title: `${winner.displayName} wins Ka·Chu·Fu·L!`, url: window.location.href })
+    } catch (_) { /* user cancelled */ }
+    setShareOpen(false)
+  }
+
+  async function downloadImage() {
+    setShareOpen(false)
+    const { default: html2canvas } = await import('html2canvas')
+    const canvas = await html2canvas(shareRef.current, { scale: 2, useCORS: true })
+    const a = document.createElement('a')
+    a.download = `${(game.name || 'kachuful').replace(/\s+/g, '-')}-results.png`
+    a.href = canvas.toDataURL('image/png')
+    a.click()
+  }
+
+  // Podium order: 2nd | 1st | 3rd (centre = tallest block)
+  const podiumOrder = sorted.length >= 3
+    ? [sorted[1], sorted[0], sorted[2]]
+    : [sorted[0], sorted[1]]
+  const podiumBlockH = [90, 120, 70]  // indices: 0=2nd, 1=1st, 2=3rd
+  const podiumMedals = ['🥈', '🥇', '🥉']
+
   return (
-    <div style={{ maxWidth: 1360, margin: '0 auto', padding: '24px 32px 48px', minHeight: '100vh', display: 'grid', gridTemplateRows: 'auto auto auto auto auto auto auto', gap: 24 }}>
+    <div
+      ref={shareRef}
+      style={{ maxWidth: 1360, margin: '0 auto', padding: '24px 32px 48px', minHeight: '100vh', display: 'grid', gridTemplateRows: 'auto auto auto auto auto auto auto auto auto', gap: 24 }}
+    >
 
       {/* ─── Top bar ─── */}
       <header style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 20, paddingBottom: 14, borderBottom: `1px solid ${V.line}` }}>
@@ -382,6 +452,26 @@ export default function FinalResults() {
             <span style={{ fontSize: 10 }}>⏱</span>
             <b style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, letterSpacing: '-0.01em', color: V.ink }}>{elapsedStr}</b>
             <span>elapsed</span>
+          </div>
+          {/* Share button */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShareOpen(o => !o)}
+              style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 12, padding: '7px 14px', fontFamily: 'var(--font-body)', fontSize: 13, color: V.ink2, cursor: 'pointer' }}
+            >
+              Share ↑
+            </button>
+            {shareOpen && (
+              <div
+                style={{ position: 'absolute', right: 0, top: '110%', background: V.surface, border: `1px solid ${V.line}`, borderRadius: 12, padding: 8, minWidth: 186, zIndex: 20, display: 'flex', flexDirection: 'column', gap: 2 }}
+                onMouseLeave={() => setShareOpen(false)}
+              >
+                <ShareItem label="Copy link" onClick={copyLink} />
+                {'share' in navigator && <ShareItem label="Share via…" onClick={shareNative} />}
+                <ShareItem label="Download image" onClick={downloadImage} />
+                <ShareItem label="Print / Save PDF" onClick={() => { setShareOpen(false); window.print() }} />
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -403,6 +493,49 @@ export default function FinalResults() {
           <span><b style={{ color: V.ink }}>{completedRounds.length}</b> rounds played</span>
         </div>
       </section>
+
+      {/* ─── Winner hero card ─── */}
+      <section style={{
+        background: `color-mix(in oklab, ${winner.color} 12%, ${V.surface})`,
+        border: `1px solid color-mix(in oklab, ${winner.color} 40%, transparent)`,
+        borderRadius: 20, padding: '24px 28px',
+        display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
+      }}>
+        <Avatar player={winner} size={72} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.16em', textTransform: 'uppercase', color: V.accent, marginBottom: 6 }}>★ Winner</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 32, letterSpacing: '-0.02em', color: V.ink }}>{winner.displayName}</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: V.ink2, marginTop: 4 }}>
+            <b style={{ color: V.ink, fontSize: 20 }}>{winnerScore}</b> points
+            {sorted.length > 1 && ` · +${winnerScore - totals[sorted[1].id]} over ${sorted[1].displayName}`}
+          </div>
+        </div>
+        <div style={{ fontSize: 56, lineHeight: 1 }}>🏆</div>
+      </section>
+
+      {/* ─── Podium ─── */}
+      {sorted.length >= 2 && (
+        <section style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 12 }}>
+          {podiumOrder.map((p, idx) => (
+            <div key={p.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <Avatar player={p} size={44} />
+              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: V.ink, textAlign: 'center', maxWidth: 96 }}>{p.displayName}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: V.ink2 }}>{totals[p.id]}</div>
+              <div style={{
+                width: 96,
+                height: podiumBlockH[idx],
+                background: `color-mix(in oklab, ${p.color} 18%, ${V.surface})`,
+                border: `1px solid color-mix(in oklab, ${p.color} 40%, transparent)`,
+                borderRadius: '10px 10px 0 0',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24,
+              }}>
+                {podiumMedals[idx]}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
       {/* ─── Standings table ─── */}
       <section style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 20, overflow: 'hidden' }}>
@@ -437,7 +570,7 @@ export default function FinalResults() {
               const medalGlyph = i < 3 ? medals[i] : (isLast ? '🥄' : `${i + 1}`)
 
               return (
-                <tr key={p.id} style={{ background: isWinner ? `color-mix(in oklab, ${V.accent} 6%, ${V.surface})` : 'transparent', borderBottom: `1px solid ${V.line}` }}>
+                <tr key={p.id} style={{ background: rankBg(ranks[p.id]?.rank, sorted.length), borderBottom: `1px solid ${V.line}` }}>
                   <td style={{ padding: '14px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontSize: 20 }}>{medalGlyph}</span>
@@ -538,3 +671,4 @@ export default function FinalResults() {
     </div>
   )
 }
+
