@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import Avatar from './Avatar'
 import GameTimer from './GameTimer'
 import SummaryModal from './SummaryModal'
+import StatsModal from './StatsModal'
 import AccountMenu from '../AccountMenu'
 import { TRUMPS, computeTotals, computeRanks, scoreFor } from '../../lib/gameLogic'
 
@@ -45,6 +46,7 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
   const [cards, setCards] = useState(defaultCards)
   const [expanded, setExpanded] = useState(false)
   const [summaryOpen, setSummaryOpen] = useState(false)
+  const [statsOpen, setStatsOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const advanceBidTimerRef = useRef(null)
@@ -162,6 +164,7 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
 
   async function handleEndGame() {
     setSummaryOpen(false)
+    setStatsOpen(false)
     try {
       await endGame()
     } catch (err) {
@@ -213,7 +216,7 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
             </div>
           </div>
 
-          {/* Timer + summary button */}
+          {/* Timer + summary + stats buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <GameTimer startedAt={game.started_at} />
             <button
@@ -237,6 +240,28 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
             >
               <span style={{ fontSize: 12 }}>◍</span>
               Game Summary
+            </button>
+            <button
+              onClick={() => setStatsOpen(true)}
+              style={{
+                background: V.surface,
+                border: `1px solid ${V.line}`,
+                color: V.ink,
+                fontFamily: 'var(--font-mono)',
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: '.12em',
+                textTransform: 'uppercase',
+                padding: '8px 14px',
+                borderRadius: 999,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <span style={{ fontSize: 12 }}>⊞</span>
+              Stats
             </button>
           </div>
 
@@ -713,6 +738,13 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
         completedRounds={completedRounds}
         pendingRound={pendingRound}
         roundNumber={roundNumber}
+      />
+      <StatsModal
+        open={statsOpen}
+        onClose={() => setStatsOpen(false)}
+        game={game}
+        players={players}
+        completedRounds={completedRounds}
       />
     </>
   )

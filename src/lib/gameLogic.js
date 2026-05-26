@@ -173,3 +173,108 @@ export function computeTrumpForRound(roundNumber, noTrumpRound) {
 export function computeDealerSeat(roundNumber, firstDealerSeat, playerCount) {
   return (firstDealerSeat + (roundNumber - 1)) % playerCount
 }
+
+// Zero-bid performance, split by card group (≤4 = small, 5+ = large).
+// Returns { overall:{count,made,pct}, small:{count,made,pct}, large:{count,made,pct} }
+export function nilBidStats(playerId, rounds) {
+  const mk = () => ({ count: 0, made: 0, pct: null })
+  const s = { overall: mk(), small: mk(), large: mk() }
+  for (const r of rounds) {
+    if (!r.took || r.bids[playerId] !== 0) continue
+    const grp = r.cards <= 4 ? 'small' : 'large'
+    const made = r.took[playerId] === 0
+    s.overall.count++; if (made) s.overall.made++
+    s[grp].count++;    if (made) s[grp].made++
+  }
+  for (const k of ['overall', 'small', 'large']) {
+    const g = s[k]; g.pct = g.count > 0 ? Math.round((g.made / g.count) * 100) : null
+  }
+  return s
+}
+
+// Per card-count and grouped (1–4 / 5+) accuracy.
+// Returns { byCnt:{[n]:{rounds,made,pct}}, small:{rounds,made,pct}, large:{rounds,made,pct} }
+export function cardCountStats(playerId, rounds) {
+  const byCnt = {}
+  const small = { rounds: 0, made: 0 }
+  const large = { rounds: 0, made: 0 }
+  for (const r of rounds) {
+    if (!r.took) continue
+    const cnt = r.cards
+    if (!byCnt[cnt]) byCnt[cnt] = { rounds: 0, made: 0, pct: null }
+    const made = r.bids[playerId] === r.took[playerId]
+    byCnt[cnt].rounds++; if (made) byCnt[cnt].made++
+    if (cnt <= 4) { small.rounds++; if (made) small.made++ }
+    else          { large.rounds++; if (made) large.made++ }
+  }
+  for (const k in byCnt) {
+    const g = byCnt[k]; g.pct = g.rounds > 0 ? Math.round((g.made / g.rounds) * 100) : null
+  }
+  return {
+    byCnt,
+    small: { ...small, pct: small.rounds > 0 ? Math.round((small.made / small.rounds) * 100) : null },
+    large: { ...large, pct: large.rounds > 0 ? Math.round((large.made / large.rounds) * 100) : null },
+  }
+}
+
+// Times as dealer and bid accuracy when dealing.
+// Rounds have dealerId (set by useGame.js from rounds.dealer_id).
+// Returns { total, made, pct }
+export function dealerBurden(playerId, rounds) {
+  let total = 0, made = 0
+  for (const r of rounds) {
+    if (!r.took || r.dealerId !== playerId) continue
+    total++
+    if (r.bids[playerId] === r.took[playerId]) made++
+  }
+  return { total, made, pct: total > 0 ? Math.round((made / total) * 100) : null }
+}
+
+// Highest score earned in a single completed round, or null.
+export function bestRoundScore(playerId, rounds, variant) {
+  let best = null
+  for (const r of rounds) {
+    if (!r.took) continue
+    const s = scoreFor(r.bids[playerId], r.took[playerId], variant)
+    if (s > 0 && (best === null || s > best)) best = s
+  }
+  return best
+}
+
+// Trump suit the player performs best at (most accurate, min 1 round played).
+// Returns { id, glyph, name, pct, made, total } or null.
+export function favoriteTrump(playerId, rounds) {
+  const perf = trumpPerformance(playerId, rounds)
+  let best = null
+  for (const [id, s] of Object.entries(perf)) {
+    if (s.total === 0) continue
+    if (!best || s.pct > best.pct) {
+      const t = TRUMPS.find(tr => tr.id === id)
+      best = { id, glyph: t?.glyph, name: t?.name, made: s.made, total: s.total, pct: s.pct }
+    }
+  }
+  return best
+}
+
+// Average bid as a fraction of cards dealt (0–1), or null if no rounds.
+// Higher = more aggressive bidder.
+export function avgBidRatio(playerId, rounds) {
+  let total = 0, count = 0
+  for (const r of rounds) {
+    if (!r.took || r.cards === 0) continue
+    total += (r.bids[playerId] ?? 0) / r.cards
+    count++
+  }
+  return count > 0 ? total / count : null
+}
+
+// Average (bid − took) per round. Positive = overbids, negative = underbids.
+export function netBidDrift(playerId, rounds) {
+  let total = 0, count = 0
+  for (const r of rounds) {
+    if (!r.took) continue
+    total += (r.bids[playerId] ?? 0) - (r.took[playerId] ?? 0)
+    count++
+  }
+  return count > 0 ? total / count : null
+}

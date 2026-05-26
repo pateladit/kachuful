@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Avatar from './Avatar'
 import GameTimer from './GameTimer'
 import SummaryModal from './SummaryModal'
+import StatsModal from './StatsModal'
 import AccountMenu from '../AccountMenu'
 import { TRUMPS, computeTotals, computeRanks, scoreFor } from '../../lib/gameLogic'
 
@@ -40,6 +41,7 @@ export default function ResultsEntry({
   const [flashIds, setFlashIds] = useState({})
   const [saving, setSaving] = useState(false)
   const [summaryOpen, setSummaryOpen] = useState(false)
+  const [statsOpen, setStatsOpen] = useState(false)
 
   const variant = game.scoring_variant
   const cards = pendingRound?.cards ?? 0
@@ -120,6 +122,7 @@ export default function ResultsEntry({
 
   async function handleEndGame() {
     setSummaryOpen(false)
+    setStatsOpen(false)
     try { await endGame() } catch (_) {}
   }
 
@@ -145,6 +148,9 @@ export default function ResultsEntry({
             <GameTimer startedAt={game.started_at} />
             <button onClick={() => setSummaryOpen(true)} style={{ background: V.surface, border: `1px solid ${V.line}`, color: V.ink, fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase', padding: '8px 14px', borderRadius: 999, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <span>◍</span> Game Summary
+            </button>
+            <button onClick={() => setStatsOpen(true)} style={{ background: V.surface, border: `1px solid ${V.line}`, color: V.ink, fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase', padding: '8px 14px', borderRadius: 999, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 12 }}>⊞</span> Stats
             </button>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
@@ -404,6 +410,13 @@ export default function ResultsEntry({
         completedRounds={completedRounds}
         pendingRound={pendingRound}
         roundNumber={roundNumber}
+      />
+      <StatsModal
+        open={statsOpen}
+        onClose={() => setStatsOpen(false)}
+        game={game}
+        players={players}
+        completedRounds={completedRounds}
       />
     </>
   )

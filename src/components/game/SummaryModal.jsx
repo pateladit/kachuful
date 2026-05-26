@@ -36,6 +36,13 @@ function totalColor(score, min, max) {
   return `color-mix(in oklab, ${V.accent3} ${Math.round(t * 100)}%, ${V.accent2})`
 }
 
+function rankBg(rank, n) {
+  if (n <= 1 || !rank) return 'transparent'
+  const t = (rank - 1) / (n - 1)
+  const base = `color-mix(in oklab, #ef4444 ${Math.round(t * 100)}%, #22c55e)`
+  return `color-mix(in oklab, ${base} 40%, transparent)`
+}
+
 const scoringLabels = {
   1: 'Classic · 10+bid',
   2: '10×bid+1',
@@ -291,7 +298,7 @@ export default function SummaryModal({
                   <tr style={{ background: V.surface }}>
                     <td style={{ padding: '10px 12px', fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, borderTop: `1px solid ${V.line}` }}>TOTAL</td>
                     {players.map(p => (
-                      <td key={p.id} style={{ padding: '10px 6px', borderLeft: `1px solid ${V.line}`, borderTop: `1px solid ${V.line}`, textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: totalColor(totals[p.id], minTotal, maxTotal), background: V.surface }}>
+                      <td key={p.id} style={{ padding: '10px 6px', borderLeft: `1px solid ${V.line}`, borderTop: `1px solid ${V.line}`, textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: totalColor(totals[p.id], minTotal, maxTotal), background: rankBg(ranks[p.id]?.rank, players.length) }}>
                         {totals[p.id]}
                       </td>
                     ))}
@@ -299,7 +306,7 @@ export default function SummaryModal({
                   <tr style={{ background: V.bg2 }}>
                     <td style={{ padding: '8px 12px', fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, background: V.bg2 }}>RANK</td>
                     {players.map(p => (
-                      <td key={p.id} style={{ padding: '8px 6px', borderLeft: `1px solid ${V.line}`, textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 12, color: p.id === leader?.id ? V.accent : V.ink2, background: V.bg2 }}>
+                      <td key={p.id} style={{ padding: '8px 6px', borderLeft: `1px solid ${V.line}`, textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 12, color: p.id === leader?.id ? V.accent : V.ink2, background: rankBg(ranks[p.id]?.rank, players.length) }}>
                         {formatRank(ranks[p.id])}
                       </td>
                     ))}
