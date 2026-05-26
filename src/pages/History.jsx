@@ -84,6 +84,8 @@ function processGame(g) {
     id: g.id,
     name: g.name,
     scoringVariant: g.scoring_variant,
+    gameType:    g.game_type    ?? 'card',
+    gameSubtype: g.game_subtype ?? 'kachufull',
     status: g.status,
     startedAt: g.started_at,
     endedAt: g.ended_at,
@@ -162,7 +164,7 @@ function StatCard({ label, value, sub, accent }) {
 // ── Game card ─────────────────────────────────────────────────────────────────
 function GameCard({ rawGame, onOpen, onStats }) {
   const pg = processGame(rawGame)
-  const { id, name, status, startedAt, endedAt, createdAt, players, completedRoundCount, totals, sorted, winner } = pg
+  const { id, name, status, startedAt, endedAt, createdAt, players, completedRoundCount, totals, sorted, winner, gameSubtype } = pg
   const isComplete = status === 'complete'
   const duration = formatDuration(startedAt, endedAt)
   const displayName = name || `Game · ${formatDate(createdAt)}`
@@ -192,6 +194,8 @@ function GameCard({ rawGame, onOpen, onStats }) {
             {' · '}
             {completedRoundCount} round{completedRoundCount !== 1 ? 's' : ''}
             {duration && ` · ${duration}`}
+            {' · '}
+            <span style={{ color: V.line }}>{gameSubtype === 'kachufull' ? 'Ka·Chu·Fu·L' : gameSubtype}</span>
           </div>
         </div>
         <div style={{

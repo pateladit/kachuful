@@ -54,11 +54,14 @@ export default function Home() {
   const [cutDone, setCutDone] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [gameCategory, setGameCategory] = useState('card')
+  const [gameSubtype,  setGameSubtype]  = useState('kachufull')
 
   const maxCards = Math.floor((52 * numDecks) / Math.max(players.length, 2))
   const loopRounds = defaultLoopRounds(startCards, peakCards)
   const allNamed = players.every(p => p.displayName.trim().length > 0)
-  const canStart = allNamed && cutDone && players.length >= 2
+  const canStart = allNamed && players.length >= 2 && gameSubtype !== null &&
+    (gameSubtype !== 'kachufull' || cutDone)
 
   // Clamp peakCards to maxCards when deck count or player count changes
   useEffect(() => {
@@ -126,6 +129,8 @@ export default function Home() {
         .from('games')
         .insert({
           name: gameName.trim() || null,
+          game_type:    gameCategory,
+          game_subtype: gameSubtype,
           scoring_variant: scoringVariant,
           no_trump_round: noTrumpRound,
           num_decks: numDecks,
@@ -331,6 +336,92 @@ export default function Home() {
               />
             </section>
 
+            {/* ── Game category ── */}
+            <section>
+              <h2 className="text-sm font-semibold text-ink-2 uppercase tracking-wider mb-3">
+                Game type
+              </h2>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: 'card',  glyph: '♠', label: 'Card Game',   sub: 'Trick-taking, rummy & more' },
+                  { id: 'board', glyph: '⬡', label: 'Board Game',  sub: 'Coming soon' },
+                ].map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => {
+                      setGameCategory(cat.id)
+                      setGameSubtype(cat.id === 'card' ? 'kachufull' : null)
+                    }}
+                    className={`flex flex-col items-center gap-1 rounded-xl border px-4 py-4 text-center transition-colors ${
+                      gameCategory === cat.id
+                        ? 'border-accent bg-surface'
+                        : 'border-line bg-surface hover:border-muted'
+                    }`}
+                  >
+                    <span className={`text-3xl leading-none ${gameCategory === cat.id ? 'text-accent' : 'text-muted'}`}>
+                      {cat.glyph}
+                    </span>
+                    <span className={`text-sm font-semibold mt-1 ${gameCategory === cat.id ? 'text-accent' : 'text-ink'}`}>
+                      {cat.label}
+                    </span>
+                    <span className="text-xs text-muted">{cat.sub}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            {/* ── Game selection ── */}
+            <section>
+              <h2 className="text-sm font-semibold text-ink-2 uppercase tracking-wider mb-3">
+                Select a game
+              </h2>
+
+              {gameCategory === 'card' && (
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setGameSubtype('kachufull')}
+                    className={`w-full flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${
+                      gameSubtype === 'kachufull'
+                        ? 'border-accent bg-surface'
+                        : 'border-line bg-surface hover:border-muted'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${
+                      gameSubtype === 'kachufull' ? 'border-accent bg-accent' : 'border-muted'
+                    }`} />
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className={`text-xl leading-none flex-shrink-0 ${gameSubtype === 'kachufull' ? 'text-accent' : 'text-muted'}`}>
+                        ♠♦♣♥
+                      </span>
+                      <div>
+                        <div className={`text-sm font-semibold ${gameSubtype === 'kachufull' ? 'text-accent' : 'text-ink'}`}>
+                          Ka Chu Fu L
+                        </div>
+                        <div className="text-xs text-muted font-mono mt-0.5">Judgement · 2–11 players</div>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              {gameCategory === 'board' && (
+                <div className="grid grid-cols-3 gap-2" style={{ opacity: 0.45 }}>
+                  {['Catan', 'Ticket to Ride', 'Pandemic'].map(name => (
+                    <div
+                      key={name}
+                      className="flex flex-col items-center gap-2 rounded-xl border border-line bg-surface px-3 py-4 text-center"
+                    >
+                      <span className="text-2xl text-muted">⬡</span>
+                      <span className="text-xs font-medium text-ink leading-tight">{name}</span>
+                      <span className="font-mono text-[9px] tracking-widest uppercase text-muted">Coming soon</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {gameSubtype === 'kachufull' && (<>
+
             {/* ── Scoring variant ── */}
             <section>
               <h2 className="text-sm font-semibold text-ink-2 uppercase tracking-wider mb-3">
@@ -497,6 +588,8 @@ export default function Home() {
               )}
             </section>
 
+            </>)}
+
           </div>
         </div>
 
@@ -513,7 +606,12 @@ export default function Home() {
               Enter a name for every player to continue.
             </p>
           )}
-          {allNamed && !cutDone && (
+          {allNamed && gameSubtype === null && (
+            <p className="text-xs text-muted text-center">
+              Select a game to continue.
+            </p>
+          )}
+          {allNamed && gameSubtype === 'kachufull' && !cutDone && (
             <p className="text-xs text-muted text-center">
               Cut for dealer before starting.
             </p>
