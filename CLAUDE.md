@@ -321,6 +321,43 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
   - `color-scheme: dark` on `<html>` — native scrollbars and selects adopt dark theme
   - `<meta name="theme-color" content="#2a1620">` — mobile browser chrome matches app background
 
+- **Session 15** — Login redesign polish + History page redesign:
+  - **Login accessibility/perf fixes** (react-best-practices + web-design-guidelines audit):
+    - `rise`/`breathe` keyframes moved from inline `<style>` to `index.css`
+    - `CORNER_POSITIONS`, `inputStyle`, `toggleBtnStyle` hoisted to module level
+    - `Page` wrapped in `React.memo` — atmospheric decorations never re-render on state changes
+    - Brand `<div>` → `<h1>`; tagline → `<p>` with `text-wrap: balance`
+    - `{error && ...}` → `{error ? ... : null}` throughout
+    - `transition: all` removed from tab buttons → explicit CSS class properties
+    - `onMouseEnter/Leave` mutations replaced with CSS `:hover` classes
+    - `focus-visible` rings on all interactive elements via `login-*` CSS classes
+    - `touch-action: manipulation` on all buttons
+    - `outline: none` removed from inputs → `.login-input:focus` in CSS
+    - `htmlFor` wired on all Field labels
+    - `text-wrap: balance` on tagline and short headings
+  - **History page full redesign** — "The Scorebook":
+    - New Game as full-width hero `<Link>` with diamond lattice pattern
+    - Game collection strip: Ka·Chu·Fu·L with live play count; 3 of Spades + Board Games as "coming soon" tiles
+    - Compact game cards: winner color bar, avatar, name/score, meta row (name · players · duration · relative time)
+    - Tap-to-expand inline standings with medals, color dots, Stats + Full Results actions
+    - `expandedIds: Set<id>` — multiple cards expandable simultaneously
+    - Subtle 2% lattice background texture — consistent with login, not theatrical
+    - `timeAgo()` helper for relative timestamps
+    - Sticky header with Ujagro brand + AccountMenu
+  - **History react-best-practices + web-design-guidelines fixes**:
+    - `processGame` runs once per game via `useMemo(games.map(processGame), [games])` — eliminates double-call
+    - `GameCard` + `GameTile` wrapped in `React.memo`
+    - `toggleCard` stable via `useCallback([])` — memoization effective
+    - `LatticeBg` hoisted to memoized module-level component — never re-renders after mount
+    - `onNavigate` prop eliminated — `GameCard` uses `<Link>` directly
+    - `toSorted()` replaces spread+sort throughout `processGame`
+    - All `&&` JSX conditionals → explicit ternary with null
+    - Navigation actions use `<Link>` not `<button onClick={navigate}>`
+    - `<div role="button">` → semantic `<button>` on card toggle row
+    - `focus-visible` rings, `touch-action`, `aria-label`, `aria-expanded`, `aria-hidden`, `aria-live` throughout
+    - `font-variant-numeric: tabular-nums` on all score/count numbers
+    - `translate="no"` on brand and game names
+
 ## Tooling & Workflow
 
 ### Production URL
