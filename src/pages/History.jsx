@@ -89,32 +89,40 @@ const LatticeBg = memo(function LatticeBg() {
   )
 })
 
-// ── Game collection tile ──────────────────────────────────────────────
-const GameTile = memo(function GameTile({ glyph, name, count, comingSoon, onClick }) {
+// ── Game collection tiles ─────────────────────────────────────────────
+const tileBaseStyle = {
+  flexShrink: 0, minWidth: 130,
+  background: 'var(--color-surface)', border: '1px solid var(--color-line)',
+  borderRadius: 14, padding: '14px 16px', textAlign: 'left',
+}
+
+const AvailableGameTile = memo(function AvailableGameTile({ glyph, name, count, onClick }) {
   return (
     <button
-      onClick={comingSoon ? undefined : onClick}
-      disabled={comingSoon}
-      aria-label={comingSoon ? `${name} — coming soon` : `${name}, played ${count} times`}
+      onClick={onClick}
+      aria-label={`${name}, played ${count} times`}
       className="hist-tile"
-      style={{
-        flexShrink: 0, minWidth: 130,
-        background: 'var(--color-surface)', border: '1px solid var(--color-line)',
-        borderRadius: 14, padding: '14px 16px',
-        textAlign: 'left', cursor: comingSoon ? 'default' : 'pointer',
-        opacity: comingSoon ? 0.45 : 1,
-      }}
+      style={{ ...tileBaseStyle, cursor: 'pointer' }}
     >
       <div aria-hidden="true" style={{ fontSize: 22, marginBottom: 8, lineHeight: 1 }}>{glyph}</div>
-      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'var(--color-ink)', marginBottom: 4 }}
-        translate="no">{name}</div>
-      {comingSoon
-        ? <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--color-muted)', marginTop: 6, display: 'inline-block', background: 'var(--color-bg-2)', border: '1px solid var(--color-line)', borderRadius: 4, padding: '2px 5px' }}>Soon</div>
-        : <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-muted)' }}>
-            Played <b style={{ color: 'var(--color-accent)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{count}</b> times
-          </div>
-      }
+      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'var(--color-ink)', marginBottom: 4 }} translate="no">{name}</div>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-muted)' }}>
+        Played <b style={{ color: 'var(--color-accent)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{count}</b> times
+      </div>
     </button>
+  )
+})
+
+const ComingSoonGameTile = memo(function ComingSoonGameTile({ glyph, name }) {
+  return (
+    <div
+      aria-label={`${name} — coming soon`}
+      style={{ ...tileBaseStyle, opacity: 0.45 }}
+    >
+      <div aria-hidden="true" style={{ fontSize: 22, marginBottom: 8, lineHeight: 1 }}>{glyph}</div>
+      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'var(--color-ink)', marginBottom: 4 }} translate="no">{name}</div>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--color-muted)', marginTop: 6, display: 'inline-block', background: 'var(--color-bg-2)', border: '1px solid var(--color-line)', borderRadius: 4, padding: '2px 5px' }}>Soon</div>
+    </div>
   )
 })
 
@@ -299,9 +307,9 @@ export default function History() {
         <div style={{ animation: 'rise 0.6s ease 0.12s both', marginBottom: 32 }}>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--color-muted)', marginBottom: 12 }}>Your games</div>
           <div style={{ display: 'flex', gap: 10, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 4 }}>
-            <GameTile glyph="♠♦♣♥" name="Ka·Chu·Fu·L" count={kachufulCount} onClick={() => navigate('/')} />
-            <GameTile glyph="♠3" name="3 of Spades" comingSoon />
-            <GameTile glyph="⬡" name="Board Games" comingSoon />
+            <AvailableGameTile glyph="♠♦♣♥" name="Ka·Chu·Fu·L" count={kachufulCount} onClick={() => navigate('/')} />
+            <ComingSoonGameTile glyph="♠3" name="3 of Spades" />
+            <ComingSoonGameTile glyph="⬡" name="Board Games" />
           </div>
         </div>
 

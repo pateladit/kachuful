@@ -134,6 +134,107 @@ const Page = memo(function Page({ children }) {
   )
 })
 
+// ── Tab panels ────────────────────────────────────────────────────────
+function SignInPanel({ onGoogleSignIn, onSubmit, email, setEmail, password, setPassword, error, pending, googlePending, onSwitchToSignUp }) {
+  return (
+    <div style={{ animation: 'rise 0.45s ease both' }}>
+      <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <GoogleButton onClick={onGoogleSignIn} pending={googlePending} />
+        <OrDivider />
+        <Field label="Email" htmlFor="si-email">
+          <input id="si-email" type="email" required autoComplete="email" name="email" spellCheck={false}
+            placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)}
+            className="login-input" style={inputStyle}
+          />
+        </Field>
+        <Field label="Password" htmlFor="si-password">
+          <input id="si-password" type="password" required autoComplete="current-password" name="password"
+            placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)}
+            className="login-input" style={inputStyle}
+          />
+        </Field>
+        {error ? <ErrorMsg>{error}</ErrorMsg> : null}
+        <PrimaryButton type="submit" disabled={pending}>
+          {pending ? 'Signing in…' : 'Sign in →'}
+        </PrimaryButton>
+      </form>
+      <ToggleLink>
+        No account?{' '}
+        <button type="button" onClick={onSwitchToSignUp} className="login-toggle-btn" style={toggleBtnStyle}>Sign up</button>
+      </ToggleLink>
+    </div>
+  )
+}
+
+function SignUpPanel({ onGoogleSignIn, onSubmit, username, setUsername, email, setEmail, password, setPassword, error, pending, googlePending, onSwitchToSignIn }) {
+  return (
+    <div style={{ animation: 'rise 0.45s ease both' }}>
+      <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <GoogleButton onClick={onGoogleSignIn} pending={googlePending} />
+        <OrDivider />
+        <Field label="Username" htmlFor="su-username">
+          <input id="su-username" type="text" required autoComplete="username" name="username"
+            placeholder="your name…" value={username} onChange={e => setUsername(e.target.value)}
+            className="login-input" style={inputStyle}
+          />
+        </Field>
+        <Field label="Email" htmlFor="su-email">
+          <input id="su-email" type="email" required autoComplete="email" name="email" spellCheck={false}
+            placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)}
+            className="login-input" style={inputStyle}
+          />
+        </Field>
+        <Field label="Password" htmlFor="su-password">
+          <input id="su-password" type="password" required autoComplete="new-password" name="password"
+            placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)}
+            className="login-input" style={inputStyle}
+          />
+        </Field>
+        {error ? <ErrorMsg>{error}</ErrorMsg> : null}
+        <PrimaryButton type="submit" disabled={pending}>
+          {pending ? 'Creating account…' : 'Create account →'}
+        </PrimaryButton>
+      </form>
+      <ToggleLink>
+        Already have one?{' '}
+        <button type="button" onClick={onSwitchToSignIn} className="login-toggle-btn" style={toggleBtnStyle}>Sign in</button>
+      </ToggleLink>
+    </div>
+  )
+}
+
+function GuestPanel({ onSubmit, guestName, setGuestName, error, pending, onSwitchToSignUp }) {
+  return (
+    <div style={{ animation: 'rise 0.45s ease both' }}>
+      <div style={{ textAlign: 'center', marginBottom: 24 }}>
+        <p style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: 'var(--color-ink-2)', marginBottom: 6, marginTop: 0, textWrap: 'balance' }}>
+          Just here for the game?
+        </p>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-muted)', letterSpacing: '.08em', margin: 0 }}>
+          No account needed · history saved on this device
+        </p>
+      </div>
+      <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <Field label="Your name" htmlFor="guest-name">
+          <input id="guest-name" type="text" autoComplete="name" name="guest-name"
+            placeholder="what should we call you…" value={guestName}
+            onChange={e => setGuestName(e.target.value)}
+            className="login-input" style={inputStyle}
+          />
+        </Field>
+        {error ? <ErrorMsg>{error}</ErrorMsg> : null}
+        <PrimaryButton type="submit" disabled={pending || !guestName.trim()}>
+          {pending ? 'Joining…' : 'Join the table →'}
+        </PrimaryButton>
+      </form>
+      <ToggleLink>
+        Want to save history?{' '}
+        <button type="button" onClick={onSwitchToSignUp} className="login-toggle-btn" style={toggleBtnStyle}>Sign up</button>
+      </ToggleLink>
+    </div>
+  )
+}
+
 // ── Login page ─────────────────────────────────────────────────────────
 export default function Login() {
   const { user, loading, signIn, signUp, signInWithGoogle, signInAnonymously } = useAuth()
@@ -271,101 +372,30 @@ export default function Login() {
           ))}
         </div>
 
-        {/* ── Sign in panel ── */}
         {tab === 'signin' ? (
-          <div style={{ animation: 'rise 0.45s ease both' }}>
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              <GoogleButton onClick={handleGoogleSignIn} pending={googlePending} />
-              <OrDivider />
-              <Field label="Email" htmlFor="si-email">
-                <input id="si-email" type="email" required autoComplete="email" name="email" spellCheck={false}
-                  placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)}
-                  className="login-input" style={inputStyle}
-                />
-              </Field>
-              <Field label="Password" htmlFor="si-password">
-                <input id="si-password" type="password" required autoComplete="current-password" name="password"
-                  placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)}
-                  className="login-input" style={inputStyle}
-                />
-              </Field>
-              {error ? <ErrorMsg>{error}</ErrorMsg> : null}
-              <PrimaryButton type="submit" disabled={pending}>
-                {pending ? 'Signing in…' : 'Sign in →'}
-              </PrimaryButton>
-            </form>
-            <ToggleLink>
-              No account?{' '}
-              <button type="button" onClick={() => switchTab('signup')} className="login-toggle-btn" style={toggleBtnStyle}>Sign up</button>
-            </ToggleLink>
-          </div>
+          <SignInPanel
+            onGoogleSignIn={handleGoogleSignIn} onSubmit={handleSubmit}
+            email={email} setEmail={setEmail} password={password} setPassword={setPassword}
+            error={error} pending={pending} googlePending={googlePending}
+            onSwitchToSignUp={() => switchTab('signup')}
+          />
         ) : null}
-
-        {/* ── Sign up panel ── */}
         {tab === 'signup' ? (
-          <div style={{ animation: 'rise 0.45s ease both' }}>
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              <GoogleButton onClick={handleGoogleSignIn} pending={googlePending} />
-              <OrDivider />
-              <Field label="Username" htmlFor="su-username">
-                <input id="su-username" type="text" required autoComplete="username" name="username"
-                  placeholder="your name…" value={username} onChange={e => setUsername(e.target.value)}
-                  className="login-input" style={inputStyle}
-                />
-              </Field>
-              <Field label="Email" htmlFor="su-email">
-                <input id="su-email" type="email" required autoComplete="email" name="email" spellCheck={false}
-                  placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)}
-                  className="login-input" style={inputStyle}
-                />
-              </Field>
-              <Field label="Password" htmlFor="su-password">
-                <input id="su-password" type="password" required autoComplete="new-password" name="password"
-                  placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)}
-                  className="login-input" style={inputStyle}
-                />
-              </Field>
-              {error ? <ErrorMsg>{error}</ErrorMsg> : null}
-              <PrimaryButton type="submit" disabled={pending}>
-                {pending ? 'Creating account…' : 'Create account →'}
-              </PrimaryButton>
-            </form>
-            <ToggleLink>
-              Already have one?{' '}
-              <button type="button" onClick={() => switchTab('signin')} className="login-toggle-btn" style={toggleBtnStyle}>Sign in</button>
-            </ToggleLink>
-          </div>
+          <SignUpPanel
+            onGoogleSignIn={handleGoogleSignIn} onSubmit={handleSubmit}
+            username={username} setUsername={setUsername}
+            email={email} setEmail={setEmail} password={password} setPassword={setPassword}
+            error={error} pending={pending} googlePending={googlePending}
+            onSwitchToSignIn={() => switchTab('signin')}
+          />
         ) : null}
-
-        {/* ── Guest panel ── */}
         {tab === 'guest' ? (
-          <div style={{ animation: 'rise 0.45s ease both' }}>
-            <div style={{ textAlign: 'center', marginBottom: 24 }}>
-              <p style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: 'var(--color-ink-2)', marginBottom: 6, marginTop: 0, textWrap: 'balance' }}>
-                Just here for the game?
-              </p>
-              <p style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-muted)', letterSpacing: '.08em', margin: 0 }}>
-                No account needed · history saved on this device
-              </p>
-            </div>
-            <form onSubmit={handleGuestSignIn} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              <Field label="Your name" htmlFor="guest-name">
-                <input id="guest-name" type="text" autoComplete="name" name="guest-name"
-                  placeholder="what should we call you…" value={guestName}
-                  onChange={e => setGuestName(e.target.value)}
-                  className="login-input" style={inputStyle}
-                />
-              </Field>
-              {error ? <ErrorMsg>{error}</ErrorMsg> : null}
-              <PrimaryButton type="submit" disabled={guestPending || !guestName.trim()}>
-                {guestPending ? 'Joining…' : 'Join the table →'}
-              </PrimaryButton>
-            </form>
-            <ToggleLink>
-              Want to save history?{' '}
-              <button type="button" onClick={() => switchTab('signup')} className="login-toggle-btn" style={toggleBtnStyle}>Sign up</button>
-            </ToggleLink>
-          </div>
+          <GuestPanel
+            onSubmit={handleGuestSignIn}
+            guestName={guestName} setGuestName={setGuestName}
+            error={error} pending={guestPending}
+            onSwitchToSignUp={() => switchTab('signup')}
+          />
         ) : null}
 
       </div>
