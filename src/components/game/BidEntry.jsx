@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Avatar from './Avatar'
 import GameTimer from './GameTimer'
 import SummaryModal from './SummaryModal'
@@ -52,11 +52,11 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
   const [pressedBtn, setPressedBtn] = useState(null)
   const advanceBidTimerRef = useRef(null)
 
-  const handleBidPress = useCallback((playerIdx, num) => {
+  function handleBidPress(playerIdx, num) {
     setPressedBtn(`${playerIdx}-${num}`)
     setTimeout(() => setPressedBtn(null), 220)
     setBid(playerIdx, num)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   // Bid order: (dealerIdx+1)%n, ..., dealerIdx
   const n = players.length
@@ -131,7 +131,7 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
     const p = players[playerIdx]
     if (!p) return
     const newBids = { ...bids, [p.id]: value }
-    setBidsState(newBids)
+    setBidsState(prev => ({ ...prev, [p.id]: value }))
 
     // Cancel any pending auto-advance
     if (advanceBidTimerRef.current) {

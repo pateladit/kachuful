@@ -1,6 +1,31 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+
+// ── Hoisted constants (never recreated) ───────────────────────────────
+const CORNER_POSITIONS = [
+  { top: 20, left: 20 },
+  { top: 20, right: 20, transform: 'rotate(180deg)' },
+  { bottom: 20, left: 20, transform: 'rotate(180deg)' },
+  { bottom: 20, right: 20 },
+]
+
+const inputStyle = {
+  background: 'transparent',
+  border: 'none',
+  borderBottom: '1px solid var(--color-line)',
+  padding: '10px 0',
+  fontFamily: 'var(--font-body)',
+  fontSize: 15,
+  color: 'var(--color-ink)',
+  width: '100%',
+}
+
+const toggleBtnStyle = {
+  background: 'none', border: 'none', fontFamily: 'var(--font-body)', fontSize: 13,
+  fontWeight: 600, color: 'var(--color-accent)', cursor: 'pointer',
+  textDecoration: 'underline', textUnderlineOffset: 3, padding: 0,
+}
 
 // ── Shared Google logo ─────────────────────────────────────────────────
 function GoogleLogo() {
@@ -15,10 +40,10 @@ function GoogleLogo() {
 }
 
 // ── Shared field ───────────────────────────────────────────────────────
-function Field({ label, children }) {
+function Field({ label, htmlFor, children }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <label style={{
+      <label htmlFor={htmlFor} style={{
         fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700,
         letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--color-muted)',
       }}>{label}</label>
@@ -27,36 +52,104 @@ function Field({ label, children }) {
   )
 }
 
-const inputStyle = {
-  background: 'transparent',
-  border: 'none',
-  borderBottom: '1px solid var(--color-line)',
-  padding: '10px 0',
-  fontFamily: 'var(--font-body)',
-  fontSize: 15,
-  color: 'var(--color-ink)',
-  outline: 'none',
-  caretColor: 'var(--color-accent)',
-  transition: 'border-color 0.2s',
-  width: '100%',
+// ── Shared small components ────────────────────────────────────────────
+function GoogleButton({ onClick, pending }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={pending}
+      className="login-google-btn"
+      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: 'var(--color-bg-2)', border: '1px solid var(--color-line)', borderRadius: 12, padding: '13px 20px', fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 500, color: 'var(--color-ink)', cursor: 'pointer' }}
+    >
+      <GoogleLogo />
+      {pending ? 'Redirecting…' : 'Continue with Google'}
+    </button>
+  )
 }
 
+function OrDivider() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ flex: 1, height: 1, background: 'var(--color-line)' }} />
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--color-muted)' }}>or</span>
+      <div style={{ flex: 1, height: 1, background: 'var(--color-line)' }} />
+    </div>
+  )
+}
+
+function PrimaryButton({ children, ...props }) {
+  return (
+    <button
+      {...props}
+      className="login-primary-btn"
+      style={{ width: '100%', background: 'var(--color-accent)', border: 'none', borderRadius: 12, padding: '13px 20px', fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700, color: 'var(--color-bg)', cursor: 'pointer', letterSpacing: '-0.01em', opacity: props.disabled ? 0.4 : 1 }}
+    >{children}</button>
+  )
+}
+
+function ErrorMsg({ children }) {
+  return (
+    <p role="alert" style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-accent-2)', margin: 0 }}>
+      {children}
+    </p>
+  )
+}
+
+function ToggleLink({ children }) {
+  return (
+    <p style={{ textAlign: 'center', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-muted)', marginTop: 16 }}>
+      {children}
+    </p>
+  )
+}
+
+// ── Atmosphere wrapper — memoized, never re-renders ────────────────────
+const Page = memo(function Page({ children }) {
+  return (
+    <div style={{ minHeight: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px 60px', background: 'var(--color-bg)' }}>
+
+      {/* Warm lamp glow */}
+      <div aria-hidden="true" style={{ position: 'fixed', inset: 0, background: 'radial-gradient(ellipse 90% 60% at 50% -5%, color-mix(in oklab, var(--color-accent) 11%, var(--color-bg)) 0%, var(--color-bg) 65%)', pointerEvents: 'none' }} />
+
+      {/* Diamond lattice — card back pattern */}
+      <div aria-hidden="true" style={{ position: 'fixed', inset: 0, backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 18px, color-mix(in oklab, var(--color-accent) 4%, transparent) 18px, color-mix(in oklab, var(--color-accent) 4%, transparent) 19px), repeating-linear-gradient(-45deg, transparent, transparent 18px, color-mix(in oklab, var(--color-accent) 4%, transparent) 18px, color-mix(in oklab, var(--color-accent) 4%, transparent) 19px)', pointerEvents: 'none' }} />
+
+      {/* Corner suit marks */}
+      {CORNER_POSITIONS.map((pos, i) => (
+        <div key={i} aria-hidden="true" style={{ position: 'fixed', ...pos, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, opacity: 0.12, pointerEvents: 'none', color: 'var(--color-accent)' }}>
+          <span style={{ fontFamily: 'Georgia, serif', fontSize: 22, lineHeight: 1 }}>♠</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '.1em' }}>U</span>
+        </div>
+      ))}
+
+      {/* Ambient center suit */}
+      <div aria-hidden="true" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: 'min(55vw, 420px)', color: 'var(--color-accent)', opacity: 0.022, pointerEvents: 'none', fontFamily: 'Georgia, serif', userSelect: 'none', animation: 'breathe 8s ease-in-out infinite' }}>♠</div>
+
+      {/* Content */}
+      <div style={{ position: 'relative', zIndex: 2, width: '100%', display: 'flex', justifyContent: 'center' }}>
+        {children}
+      </div>
+    </div>
+  )
+})
+
+// ── Login page ─────────────────────────────────────────────────────────
 export default function Login() {
   const { user, loading, signIn, signUp, signInWithGoogle, signInAnonymously } = useAuth()
   const navigate = useNavigate()
 
-  const [tab, setTab]                     = useState('signin')   // 'signin' | 'signup' | 'guest'
-  const [email, setEmail]                 = useState('')
-  const [password, setPassword]           = useState('')
-  const [username, setUsername]           = useState('')
-  const [guestName, setGuestName]         = useState('')
-  const [error, setError]                 = useState('')
-  const [pending, setPending]             = useState(false)
-  const [guestPending, setGuestPending]   = useState(false)
-  const [googlePending, setGooglePending] = useState(false)
+  const [tab, setTab]                           = useState('signin')
+  const [email, setEmail]                       = useState('')
+  const [password, setPassword]                 = useState('')
+  const [username, setUsername]                 = useState('')
+  const [guestName, setGuestName]               = useState('')
+  const [error, setError]                       = useState('')
+  const [pending, setPending]                   = useState(false)
+  const [guestPending, setGuestPending]         = useState(false)
+  const [googlePending, setGooglePending]       = useState(false)
   const [confirmationSent, setConfirmationSent] = useState(false)
 
-  // Already logged in — skip straight to history
   if (!loading && user) return <Navigate to="/history" replace />
 
   function switchTab(t) { setTab(t); setError(''); setConfirmationSent(false) }
@@ -105,14 +198,14 @@ export default function Login() {
     }
   }
 
-  // ── Confirmation screen ────────────────────────────────────────────
+  // ── Confirmation screen ──────────────────────────────────────────────
   if (confirmationSent) {
     return (
       <Page>
         <div style={{ textAlign: 'center', maxWidth: 360 }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 28, color: 'var(--color-ink)', marginBottom: 12 }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 28, color: 'var(--color-ink)', marginBottom: 12, textWrap: 'balance' }}>
             Check your email
-          </div>
+          </h1>
           <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--color-ink-2)', lineHeight: 1.6, marginBottom: 20 }}>
             We sent a confirmation link to{' '}
             <strong style={{ color: 'var(--color-ink)' }}>{email}</strong>.
@@ -120,6 +213,7 @@ export default function Login() {
           </p>
           <button
             onClick={() => switchTab('signin')}
+            className="login-back-btn"
             style={{ background: 'none', border: 'none', fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--color-accent)', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}
           >
             Back to sign in
@@ -129,22 +223,22 @@ export default function Login() {
     )
   }
 
-  // ── Main login ─────────────────────────────────────────────────────
+  // ── Main login ───────────────────────────────────────────────────────
   return (
     <Page>
       <div style={{ width: '100%', maxWidth: 380 }}>
 
         {/* Brand */}
         <div style={{ textAlign: 'center', marginBottom: 36, animation: 'rise 0.7s cubic-bezier(0.22,1,0.36,1) 0.1s both' }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(48px, 13vw, 68px)', letterSpacing: '-0.04em', color: 'var(--color-ink)', lineHeight: 1 }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(48px, 13vw, 68px)', letterSpacing: '-0.04em', color: 'var(--color-ink)', lineHeight: 1, margin: 0 }}>
             Uja<span style={{ color: 'var(--color-accent)' }}>gro</span>
-          </div>
-          <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--color-ink-2)', marginTop: 10 }}>
+          </h1>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--color-ink-2)', marginTop: 10, marginBottom: 0, textWrap: 'balance' }}>
             Where every game night begins.
-          </div>
-          <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--color-muted)', marginTop: 3 }}>
+          </p>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--color-muted)', marginTop: 3, marginBottom: 0 }}>
             જ્યાં રાત શરૂ થાય.
-          </div>
+          </p>
         </div>
 
         {/* Decorative rule */}
@@ -155,19 +249,22 @@ export default function Login() {
         </div>
 
         {/* Tab switcher */}
-        <div role="tablist" aria-label="Sign in method" style={{ display: 'flex', gap: 0, background: 'var(--color-bg-2)', border: '1px solid var(--color-line)', borderRadius: 12, padding: 3, marginBottom: 24, animation: 'rise 0.6s ease 0.4s both' }}>
+        <div role="tablist" aria-label="Sign in method" style={{ display: 'flex', background: 'var(--color-bg-2)', border: '1px solid var(--color-line)', borderRadius: 12, padding: 3, marginBottom: 24, animation: 'rise 0.6s ease 0.4s both' }}>
           {[['signin','Sign in'],['signup','Sign up'],['guest','Guest']].map(([t, label]) => (
             <button
               key={t}
               role="tab"
               aria-selected={tab === t}
               onClick={() => switchTab(t)}
+              className="login-tab-btn"
               style={{
-                flex: 1, background: tab === t ? 'var(--color-surface)' : 'none',
+                flex: 1,
+                background: tab === t ? 'var(--color-surface)' : 'none',
                 border: 'none', borderRadius: 9, padding: '8px 0',
-                fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: tab === t ? 600 : 400,
+                fontFamily: 'var(--font-body)', fontSize: 13,
+                fontWeight: tab === t ? 600 : 400,
                 color: tab === t ? 'var(--color-ink)' : 'var(--color-muted)',
-                cursor: 'pointer', transition: 'all 0.2s',
+                cursor: 'pointer',
                 boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,0.35)' : 'none',
               }}
             >{label}</button>
@@ -175,212 +272,103 @@ export default function Login() {
         </div>
 
         {/* ── Sign in panel ── */}
-        {tab === 'signin' && (
+        {tab === 'signin' ? (
           <div style={{ animation: 'rise 0.45s ease both' }}>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               <GoogleButton onClick={handleGoogleSignIn} pending={googlePending} />
               <OrDivider />
-              <Field label="Email">
-                <input type="email" required autoComplete="email" name="email" spellCheck={false}
+              <Field label="Email" htmlFor="si-email">
+                <input id="si-email" type="email" required autoComplete="email" name="email" spellCheck={false}
                   placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)}
-                  style={inputStyle}
-                  onFocus={e => e.target.style.borderBottomColor = 'var(--color-accent)'}
-                  onBlur={e => e.target.style.borderBottomColor = 'var(--color-line)'}
+                  className="login-input" style={inputStyle}
                 />
               </Field>
-              <Field label="Password">
-                <input type="password" required autoComplete="current-password" name="password"
+              <Field label="Password" htmlFor="si-password">
+                <input id="si-password" type="password" required autoComplete="current-password" name="password"
                   placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)}
-                  style={inputStyle}
-                  onFocus={e => e.target.style.borderBottomColor = 'var(--color-accent)'}
-                  onBlur={e => e.target.style.borderBottomColor = 'var(--color-line)'}
+                  className="login-input" style={inputStyle}
                 />
               </Field>
-              {error && <ErrorMsg>{error}</ErrorMsg>}
+              {error ? <ErrorMsg>{error}</ErrorMsg> : null}
               <PrimaryButton type="submit" disabled={pending}>
                 {pending ? 'Signing in…' : 'Sign in →'}
               </PrimaryButton>
             </form>
             <ToggleLink>
               No account?{' '}
-              <button type="button" onClick={() => switchTab('signup')} style={toggleBtnStyle}>Sign up</button>
+              <button type="button" onClick={() => switchTab('signup')} className="login-toggle-btn" style={toggleBtnStyle}>Sign up</button>
             </ToggleLink>
           </div>
-        )}
+        ) : null}
 
         {/* ── Sign up panel ── */}
-        {tab === 'signup' && (
+        {tab === 'signup' ? (
           <div style={{ animation: 'rise 0.45s ease both' }}>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               <GoogleButton onClick={handleGoogleSignIn} pending={googlePending} />
               <OrDivider />
-              <Field label="Username">
-                <input type="text" required autoComplete="username" name="username"
+              <Field label="Username" htmlFor="su-username">
+                <input id="su-username" type="text" required autoComplete="username" name="username"
                   placeholder="your name…" value={username} onChange={e => setUsername(e.target.value)}
-                  style={inputStyle}
-                  onFocus={e => e.target.style.borderBottomColor = 'var(--color-accent)'}
-                  onBlur={e => e.target.style.borderBottomColor = 'var(--color-line)'}
+                  className="login-input" style={inputStyle}
                 />
               </Field>
-              <Field label="Email">
-                <input type="email" required autoComplete="email" name="email" spellCheck={false}
+              <Field label="Email" htmlFor="su-email">
+                <input id="su-email" type="email" required autoComplete="email" name="email" spellCheck={false}
                   placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)}
-                  style={inputStyle}
-                  onFocus={e => e.target.style.borderBottomColor = 'var(--color-accent)'}
-                  onBlur={e => e.target.style.borderBottomColor = 'var(--color-line)'}
+                  className="login-input" style={inputStyle}
                 />
               </Field>
-              <Field label="Password">
-                <input type="password" required autoComplete="new-password" name="password"
+              <Field label="Password" htmlFor="su-password">
+                <input id="su-password" type="password" required autoComplete="new-password" name="password"
                   placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)}
-                  style={inputStyle}
-                  onFocus={e => e.target.style.borderBottomColor = 'var(--color-accent)'}
-                  onBlur={e => e.target.style.borderBottomColor = 'var(--color-line)'}
+                  className="login-input" style={inputStyle}
                 />
               </Field>
-              {error && <ErrorMsg>{error}</ErrorMsg>}
+              {error ? <ErrorMsg>{error}</ErrorMsg> : null}
               <PrimaryButton type="submit" disabled={pending}>
                 {pending ? 'Creating account…' : 'Create account →'}
               </PrimaryButton>
             </form>
             <ToggleLink>
               Already have one?{' '}
-              <button type="button" onClick={() => switchTab('signin')} style={toggleBtnStyle}>Sign in</button>
+              <button type="button" onClick={() => switchTab('signin')} className="login-toggle-btn" style={toggleBtnStyle}>Sign in</button>
             </ToggleLink>
           </div>
-        )}
+        ) : null}
 
         {/* ── Guest panel ── */}
-        {tab === 'guest' && (
+        {tab === 'guest' ? (
           <div style={{ animation: 'rise 0.45s ease both' }}>
             <div style={{ textAlign: 'center', marginBottom: 24 }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: 'var(--color-ink-2)', marginBottom: 6 }}>
+              <p style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: 'var(--color-ink-2)', marginBottom: 6, marginTop: 0, textWrap: 'balance' }}>
                 Just here for the game?
-              </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-muted)', letterSpacing: '.08em' }}>
+              </p>
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-muted)', letterSpacing: '.08em', margin: 0 }}>
                 No account needed · history saved on this device
-              </div>
+              </p>
             </div>
             <form onSubmit={handleGuestSignIn} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              <Field label="Your name">
-                <input type="text" autoComplete="name" name="guest-name"
+              <Field label="Your name" htmlFor="guest-name">
+                <input id="guest-name" type="text" autoComplete="name" name="guest-name"
                   placeholder="what should we call you…" value={guestName}
                   onChange={e => setGuestName(e.target.value)}
-                  style={inputStyle}
-                  onFocus={e => e.target.style.borderBottomColor = 'var(--color-accent)'}
-                  onBlur={e => e.target.style.borderBottomColor = 'var(--color-line)'}
+                  className="login-input" style={inputStyle}
                 />
               </Field>
-              {error && <ErrorMsg>{error}</ErrorMsg>}
+              {error ? <ErrorMsg>{error}</ErrorMsg> : null}
               <PrimaryButton type="submit" disabled={guestPending || !guestName.trim()}>
                 {guestPending ? 'Joining…' : 'Join the table →'}
               </PrimaryButton>
             </form>
             <ToggleLink>
               Want to save history?{' '}
-              <button type="button" onClick={() => switchTab('signup')} style={toggleBtnStyle}>Sign up</button>
+              <button type="button" onClick={() => switchTab('signup')} className="login-toggle-btn" style={toggleBtnStyle}>Sign up</button>
             </ToggleLink>
           </div>
-        )}
+        ) : null}
 
       </div>
     </Page>
   )
-}
-
-// ── Atmosphere wrapper ─────────────────────────────────────────────────
-function Page({ children }) {
-  return (
-    <div style={{ minHeight: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px 60px', background: 'var(--color-bg)' }}>
-
-      {/* Warm lamp glow from above */}
-      <div aria-hidden="true" style={{ position: 'fixed', inset: 0, background: 'radial-gradient(ellipse 90% 60% at 50% -5%, color-mix(in oklab, var(--color-accent) 11%, var(--color-bg)) 0%, var(--color-bg) 65%)', pointerEvents: 'none' }} />
-
-      {/* Diamond lattice — card back pattern */}
-      <div aria-hidden="true" style={{ position: 'fixed', inset: 0, backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 18px, color-mix(in oklab, var(--color-accent) 4%, transparent) 18px, color-mix(in oklab, var(--color-accent) 4%, transparent) 19px), repeating-linear-gradient(-45deg, transparent, transparent 18px, color-mix(in oklab, var(--color-accent) 4%, transparent) 18px, color-mix(in oklab, var(--color-accent) 4%, transparent) 19px)', pointerEvents: 'none' }} />
-
-      {/* Corner suit marks — playing card corners */}
-      {[
-        { top: 20, left: 20 },
-        { top: 20, right: 20, transform: 'rotate(180deg)' },
-        { bottom: 20, left: 20, transform: 'rotate(180deg)' },
-        { bottom: 20, right: 20 },
-      ].map((pos, i) => (
-        <div key={i} aria-hidden="true" style={{ position: 'fixed', ...pos, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, opacity: 0.12, pointerEvents: 'none', color: 'var(--color-accent)' }}>
-          <span style={{ fontFamily: 'Georgia, serif', fontSize: 22, lineHeight: 1 }}>♠</span>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '.1em' }}>U</span>
-        </div>
-      ))}
-
-      {/* Ambient center suit — breathing */}
-      <div aria-hidden="true" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: 'min(55vw, 420px)', color: 'var(--color-accent)', opacity: 0.022, pointerEvents: 'none', fontFamily: 'Georgia, serif', userSelect: 'none', animation: 'breathe 8s ease-in-out infinite' }} >♠</div>
-
-      {/* Content */}
-      <div style={{ position: 'relative', zIndex: 2, width: '100%', display: 'flex', justifyContent: 'center' }}>
-        {children}
-      </div>
-
-      <style>{`
-        @keyframes rise {
-          from { opacity: 0; transform: translateY(16px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes breathe {
-          0%, 100% { opacity: 0.022; transform: translate(-50%, -50%) scale(1); }
-          50%       { opacity: 0.028; transform: translate(-50%, -50%) scale(1.02); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          *, *::before, *::after { animation: none !important; transition: none !important; }
-        }
-      `}</style>
-    </div>
-  )
-}
-
-// ── Shared small components ────────────────────────────────────────────
-function GoogleButton({ onClick, pending }) {
-  return (
-    <button type="button" onClick={onClick} disabled={pending}
-      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: 'var(--color-bg-2)', border: '1px solid var(--color-line)', borderRadius: 12, padding: '13px 20px', fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 500, color: 'var(--color-ink)', cursor: 'pointer', transition: 'border-color 0.2s, background 0.2s' }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-muted)'; e.currentTarget.style.background = 'var(--color-surface)' }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-line)'; e.currentTarget.style.background = 'var(--color-bg-2)' }}
-    >
-      <GoogleLogo />
-      {pending ? 'Redirecting…' : 'Continue with Google'}
-    </button>
-  )
-}
-
-function OrDivider() {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <div style={{ flex: 1, height: 1, background: 'var(--color-line)' }} />
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--color-muted)' }}>or</span>
-      <div style={{ flex: 1, height: 1, background: 'var(--color-line)' }} />
-    </div>
-  )
-}
-
-function PrimaryButton({ children, ...props }) {
-  return (
-    <button {...props}
-      style={{ width: '100%', background: 'var(--color-accent)', border: 'none', borderRadius: 12, padding: '13px 20px', fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700, color: 'var(--color-bg)', cursor: 'pointer', letterSpacing: '-0.01em', transition: 'opacity 0.2s', opacity: props.disabled ? 0.4 : 1 }}
-      onMouseEnter={e => { if (!props.disabled) e.currentTarget.style.opacity = '0.88' }}
-      onMouseLeave={e => { if (!props.disabled) e.currentTarget.style.opacity = '1' }}
-    >{children}</button>
-  )
-}
-
-function ErrorMsg({ children }) {
-  return <p role="alert" style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-accent-2)', margin: 0 }}>{children}</p>
-}
-
-function ToggleLink({ children }) {
-  return <p style={{ textAlign: 'center', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-muted)', marginTop: 16 }}>{children}</p>
-}
-
-const toggleBtnStyle = {
-  background: 'none', border: 'none', fontFamily: 'var(--font-body)', fontSize: 13,
-  fontWeight: 600, color: 'var(--color-accent)', cursor: 'pointer',
-  textDecoration: 'underline', textUnderlineOffset: 3, padding: 0,
 }
