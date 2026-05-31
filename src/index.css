@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg:       #2a1620;
-  --color-bg-2:     #3a1f2c;
-  --color-surface:  #3d2330;
-  --color-ink:      #f6e7d3;
-  --color-ink-2:    #d8b893;
-  --color-muted:    #9b7c6b;
-  --color-line:     #5a3445;
-  --color-accent:   #e89a3c;
-  --color-accent-2: #d24a3d;
-  --color-accent-3: #b6c97a;
-  --color-red-suit: #e57860;
+  --color-bg:       #211218;
+  --color-bg-2:     #301820;
+  --color-surface:  #381c2a;
+  --color-ink:      #f5e6cc;
+  --color-ink-2:    #d4a882;
+  --color-muted:    #8e7060;
+  --color-line:     #4c2c3c;
+  --color-accent:   #c98818;
+  --color-accent-2: #cc3e35;
+  --color-accent-3: #a8c068;
+  --color-red-suit: #d86e52;
 
   --font-display: 'Bricolage Grotesque', sans-serif;
   --font-body:    'Geist', sans-serif;
@@ -29,17 +29,17 @@
 
 /* Mehfil (light) theme overrides */
 :root[data-theme="mehfil"] {
-  --color-bg:       #f6efe2;
-  --color-bg-2:     #ece1cb;
-  --color-surface:  #fffaf0;
-  --color-ink:      #2a1a14;
-  --color-ink-2:    #5b4438;
-  --color-muted:    #8e7a6c;
-  --color-line:     #d8c8b1;
-  --color-accent:   #c14a2b;
-  --color-accent-2: #e08a1e;
-  --color-accent-3: #1f5c4a;
-  --color-red-suit: #b62a2a;
+  --color-bg:       #f5eedf;
+  --color-bg-2:     #ebe0c8;
+  --color-surface:  #fdf8ee;
+  --color-ink:      #281810;
+  --color-ink-2:    #573e2c;
+  --color-muted:    #8a7260;
+  --color-line:     #d4c4a8;
+  --color-accent:   #a8480c;
+  --color-accent-2: #c98818;
+  --color-accent-3: #1e5840;
+  --color-red-suit: #b02828;
 }
 
 /* Flash animations for results entry tiles */
