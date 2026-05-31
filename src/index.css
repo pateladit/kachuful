@@ -369,3 +369,105 @@
   from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ── Game screen shared layout ─────────────────────────────────────── */
+
+/* Responsive content area: spotlight left, running tab right sidebar */
+.game-content {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .game-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Running tab sidebar: sticky + internally scrollable */
+.game-tab-sidebar {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+@media (max-width: 1100px) {
+  .game-tab-sidebar {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+/* Round label cell — sticky left inside horizontal scroll */
+.game-tab-round-cell {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+
+/* ── Forbidden bid button ──────────────────────────────────────────── */
+.bid-btn-forbidden {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Diagonal red strike-through overlay */
+.bid-btn-forbidden::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    transparent calc(50% - 1.5px),
+    var(--color-accent-2) calc(50% - 1.5px),
+    var(--color-accent-2) calc(50% + 1.5px),
+    transparent calc(50% + 1.5px)
+  );
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0.7;
+}
+
+@keyframes forbidden-shake {
+  0%,  100% { transform: translateX(0); }
+  18%        { transform: translateX(-6px); }
+  36%        { transform: translateX(6px); }
+  54%        { transform: translateX(-4px); }
+  72%        { transform: translateX(4px); }
+  88%        { transform: translateX(-2px); }
+}
+
+.bid-btn-forbidden-shake {
+  animation: forbidden-shake 0.38s ease !important;
+}
+
+/* Icon action buttons in game header */
+.game-icon-btn {
+  touch-action: manipulation;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.game-icon-btn:hover { background: var(--color-bg-2) !important; border-color: var(--color-muted) !important; color: var(--color-ink) !important; }
+.game-icon-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* Number pad buttons */
+.bid-num-btn {
+  touch-action: manipulation;
+  transition: background 0.1s, border-color 0.1s, transform 0.1s;
+}
+.bid-num-btn:hover:not(:disabled) { filter: brightness(1.08); }
+.bid-num-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* Bid order chip buttons */
+.bid-chip-btn {
+  touch-action: manipulation;
+  transition: opacity 0.2s, background 0.15s, border-color 0.15s;
+}
+.bid-chip-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* Seat team toggle badge (custom mode) */
+.setup-seat-team-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }

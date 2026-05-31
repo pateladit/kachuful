@@ -19,8 +19,9 @@ const COLOR_NAMES = {
 }
 
 const GAMES = [
-  { subtype: 'kachufull', glyph: '♠♦♣♥', name: 'Ka·Chu·Fu·L', sub: 'Judgement · 2–11 players', category: 'card',  available: true },
-  { subtype: 'spades3',   glyph: '♠3',    name: '3 of Spades',  sub: 'Coming soon',              category: 'card',  available: false },
+  { subtype: 'kachufull', glyph: '♠♦♣♥', name: 'Ka·Chu·Fu·L',       sub: 'Judgement · 2–11 players', category: 'card',  available: true },
+  { subtype: 'freeform',  glyph: '✎',     name: 'Free Form Entry',   sub: 'Any game · 2–11 players',  category: 'card',  available: true },
+  { subtype: 'spades3',   glyph: '♠3',    name: '3 of Spades',       sub: 'Coming soon',              category: 'card',  available: false },
   { subtype: 'catan',     glyph: '⬡',     name: 'Catan',        sub: 'Coming soon',              category: 'board', available: false },
   { subtype: 'ticket',    glyph: '🚂',    name: 'Ticket to Ride',sub: 'Coming soon',             category: 'board', available: false },
   { subtype: 'pandemic',  glyph: '🧬',    name: 'Pandemic',     sub: 'Coming soon',              category: 'board', available: false },
@@ -33,7 +34,7 @@ const SCORING_FORMULAS = {
 }
 
 function makePlayer(index) {
-  return { id: crypto.randomUUID(), displayName: '', color: PLAYER_COLORS[index % PLAYER_COLORS.length], emoji: null }
+  return { id: crypto.randomUUID(), displayName: '', color: PLAYER_COLORS[index % PLAYER_COLORS.length], emoji: null, team: null }
 }
 
 // ── Seat Avatar (local, separate from game-screen Avatar component) ───
@@ -231,6 +232,7 @@ export default function Home() {
   const [startCards, setStartCards]     = useState(1)
   const [peakCards, setPeakCards]       = useState(8)
   const [dealerSeat, setDealerSeat]     = useState(null)
+  const [teamMode, setTeamMode]         = useState('none')
   const [advOpen, setAdvOpen]           = useState(false)
   const [submitting, setSubmitting]     = useState(false)
   const [error, setError]               = useState('')
@@ -276,12 +278,18 @@ export default function Home() {
     setDealerSeat(players.indexOf(picked))
   }, [players])
 
-  const closeEditor = useCallback(() => setActiveEditId(null), [])
-  const toggleAdv   = useCallback(() => setAdvOpen(v => !v), [])
+  const closeEditor  = useCallback(() => setActiveEditId(null), [])
+  const toggleAdv    = useCallback(() => setAdvOpen(v => !v), [])
+  const selectGame   = useCallback((subtype) => {
+    setGameSubtype(subtype)
+    if (subtype !== 'freeform') setTeamMode('none')
+  }, [])
 
   // Readiness
   const allNamed = players.every(p => p.displayName.trim().length > 0)
-  const canStart = allNamed && players.length >= 2 && gameSubtype === 'kachufull' && dealerSeat !== null && !submitting
+  const gameReady = gameSubtype === 'kachufull' || gameSubtype === 'freeform'
+  const needsDealer = gameSubtype === 'kachufull'
+  const canStart = allNamed && players.length >= 2 && gameReady && (!needsDealer || dealerSeat !== null) && !submitting
 
   const hints = useMemo(() => {
     const h = []
@@ -290,10 +298,10 @@ export default function Home() {
       const unnamed = players.filter(p => !p.displayName.trim()).length
       if (unnamed > 0) h.push(`${unnamed} player${unnamed > 1 ? 's' : ''} need a name`)
     }
-    if (gameSubtype !== 'kachufull') h.push('select a game')
-    if (dealerSeat === null) h.push('assign a dealer')
+    if (!gameReady) h.push('select a game')
+    if (needsDealer && dealerSeat === null) h.push('assign a dealer')
     return h
-  }, [players, gameSubtype, dealerSeat])
+  }, [players, gameReady, needsDealer, dealerSeat])
 
   // Submit
   async function handleStart() {
@@ -301,21 +309,31 @@ export default function Home() {
     setSubmitting(true)
     setError('')
     try {
+      const resolvedTeamMode = gameSubtype === 'freeform' ? teamMode : null
+
+      function playerTeam(i) {
+        if (gameSubtype !== 'freeform' || teamMode === 'none') return null
+        if (teamMode === 'alternating') return i % 2 === 0 ? 1 : 2
+        // custom: use per-player assignment, default to alternating if unset
+        return players[i].team ?? (i % 2 === 0 ? 1 : 2)
+      }
+
       const { data: game, error: gameErr } = await supabase
         .from('games')
         .insert({
           name: gameName.trim() || null,
-          scoring_variant: scoringVariant,
-          no_trump_round: noTrumpRound,
+          scoring_variant: gameSubtype === 'kachufull' ? scoringVariant : null,
+          no_trump_round: gameSubtype === 'kachufull' ? noTrumpRound : null,
           num_decks: numDecks,
-          start_cards: startCards,
-          peak_cards: peakCards,
-          first_dealer_seat: dealerSeat,
+          start_cards: gameSubtype === 'kachufull' ? startCards : null,
+          peak_cards: gameSubtype === 'kachufull' ? peakCards : null,
+          first_dealer_seat: gameSubtype === 'kachufull' ? dealerSeat : null,
           started_at: new Date().toISOString(),
           created_by: user.id,
           status: 'in_progress',
           game_type: 'card',
           game_subtype: gameSubtype,
+          team_mode: resolvedTeamMode,
         })
         .select().single()
       if (gameErr) throw gameErr
@@ -328,6 +346,7 @@ export default function Home() {
           display_name: p.displayName.trim(),
           color: p.color,
           seat_order: i,
+          team: playerTeam(i),
         })))
       if (playersErr) throw playersErr
 
@@ -393,7 +412,14 @@ export default function Home() {
                   className="setup-seat-btn"
                   onClick={() => setActiveEditId(activeEditId === player.id ? null : player.id)}
                   aria-expanded={activeEditId === player.id}
-                  aria-label={`Edit ${player.displayName || `Player ${idx + 1}`}`}
+                  aria-label={[
+                    `Edit ${player.displayName || `Player ${idx + 1}`}`,
+                    gameSubtype === 'freeform' && teamMode === 'alternating'
+                      ? `— Team ${idx % 2 === 0 ? 'A' : 'B'}`
+                      : gameSubtype === 'freeform' && teamMode === 'custom'
+                        ? `— Team ${(player.team ?? (idx % 2 === 0 ? 1 : 2)) === 1 ? 'A' : 'B'}`
+                        : null,
+                  ].filter(Boolean).join(' ')}
                   style={{ width: 86, height: 86, borderRadius: 16, background: 'var(--color-surface)', border: `1px solid ${activeEditId === player.id ? 'var(--color-accent)' : 'var(--color-line)'}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', boxShadow: activeEditId === player.id ? '0 0 0 3px color-mix(in oklab, var(--color-accent) 20%, transparent)' : 'none' }}
                 >
                   <SeatAvatar player={player} size={36} />
@@ -404,7 +430,20 @@ export default function Home() {
                   {dealerSeat === idx ? (
                     <div style={{ position: 'absolute', top: 4, right: 4, background: 'var(--color-accent)', borderRadius: 4, padding: '1px 5px', fontFamily: 'var(--font-mono)', fontSize: 8, fontWeight: 700, letterSpacing: '.06em', color: 'var(--color-bg)' }}>D</div>
                   ) : null}
+                  {/* Alternating team badge — decorative div, aria info is on the button label */}
+                  {gameSubtype === 'freeform' && teamMode === 'alternating' ? (
+                    <div aria-hidden="true" style={{ position: 'absolute', bottom: 4, right: 4, width: 18, height: 18, borderRadius: 4, background: idx % 2 === 0 ? 'var(--color-accent)' : 'var(--color-accent-2)', fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>{idx % 2 === 0 ? 'A' : 'B'}</div>
+                  ) : null}
                 </button>
+                {/* Custom team badge — outside seat button to avoid nested interactive elements */}
+                {gameSubtype === 'freeform' && teamMode === 'custom' ? (
+                  <button
+                    className="setup-seat-team-btn"
+                    onClick={e => { e.stopPropagation(); updatePlayer(player.id, 'team', (player.team ?? (idx % 2 === 0 ? 1 : 2)) === 1 ? 2 : 1) }}
+                    aria-label={`${player.displayName || `Player ${idx + 1}`}: Team ${(player.team ?? (idx % 2 === 0 ? 1 : 2)) === 1 ? 'A' : 'B'} — tap to switch`}
+                    style={{ position: 'absolute', bottom: 4, right: 4, width: 22, height: 22, borderRadius: 4, background: (player.team ?? (idx % 2 === 0 ? 1 : 2)) === 1 ? 'var(--color-accent)' : 'var(--color-accent-2)', border: 'none', fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, touchAction: 'manipulation' }}
+                  >{(player.team ?? (idx % 2 === 0 ? 1 : 2)) === 1 ? 'A' : 'B'}</button>
+                ) : null}
 
                 {/* Remove button */}
                 {players.length > 2 ? (
@@ -463,7 +502,7 @@ export default function Home() {
                       role="radio"
                       aria-checked={gameSubtype === g.subtype}
                       disabled={!g.available}
-                      onClick={() => g.available && setGameSubtype(g.subtype)}
+                      onClick={() => g.available && selectGame(g.subtype)}
                       style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, background: gameSubtype === g.subtype ? 'color-mix(in oklab, var(--color-accent) 8%, var(--color-surface))' : 'var(--color-bg-2)', border: `1px solid ${gameSubtype === g.subtype ? 'var(--color-accent)' : 'var(--color-line)'}`, borderRadius: 12, padding: '10px 13px', cursor: g.available ? 'pointer' : 'default', textAlign: 'left', opacity: g.available ? 1 : 0.45, marginBottom: 8 }}
                     >
                       <span style={{ fontSize: 18, flexShrink: 0 }} translate="no">{g.glyph}</span>
@@ -494,7 +533,8 @@ export default function Home() {
               </div>
             </section>
 
-            {/* Dealer */}
+            {/* Dealer (Ka·Chu·Fu·L only) */}
+            {gameSubtype !== 'freeform' ? (
             <section style={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: 16, padding: '16px 18px' }} aria-label="First dealer">
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--color-muted)', marginBottom: 12 }} aria-hidden="true">First dealer</div>
               {dealer ? (
@@ -515,6 +555,7 @@ export default function Home() {
                 </button>
               )}
             </section>
+            ) : null}
           </div>
 
           {/* RIGHT: Game name + Advanced */}
@@ -538,7 +579,39 @@ export default function Home() {
               />
             </div>
 
-            {/* Advanced settings */}
+            {/* Team mode (freeform only) */}
+            {gameSubtype === 'freeform' ? (
+              <section style={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: 16, padding: '16px 18px' }} aria-label="Team mode">
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--color-muted)', marginBottom: 12 }} aria-hidden="true">Teams</div>
+                <div style={{ display: 'flex', gap: 6 }} role="group" aria-label="Team mode">
+                  {[
+                    { value: 'none',        label: 'None',        desc: 'Individual scores' },
+                    { value: 'alternating', label: 'Alternating', desc: 'A·B·A·B by seat' },
+                    { value: 'custom',      label: 'Custom',      desc: 'Tap seat card to toggle' },
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      className="setup-scoring-btn"
+                      role="radio"
+                      aria-checked={teamMode === opt.value}
+                      aria-label={opt.label}
+                      title={opt.desc}
+                      onClick={() => setTeamMode(opt.value)}
+                      style={{ flex: 1, padding: '7px 4px', borderRadius: 10, border: `1px solid ${teamMode === opt.value ? 'var(--color-accent)' : 'var(--color-line)'}`, background: teamMode === opt.value ? 'color-mix(in oklab, var(--color-accent) 12%, var(--color-surface))' : 'var(--color-bg-2)', fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.04em', color: teamMode === opt.value ? 'var(--color-accent)' : 'var(--color-ink-2)', cursor: 'pointer', fontWeight: teamMode === opt.value ? 700 : 400, textAlign: 'center' }}
+                    >{opt.label}</button>
+                  ))}
+                </div>
+                {teamMode === 'custom' ? (
+                  <div style={{ marginTop: 10, fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-muted)', letterSpacing: '.04em' }}>Tap the A/B badge on each seat to switch teams.</div>
+                ) : null}
+                {teamMode === 'alternating' ? (
+                  <div style={{ marginTop: 10, fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-muted)', letterSpacing: '.04em' }}>Seats 1,3,5… → A · Seats 2,4,6… → B</div>
+                ) : null}
+              </section>
+            ) : null}
+
+            {/* Advanced settings (Ka·Chu·Fu·L only) */}
+            {gameSubtype !== 'freeform' ? (
             <section style={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: 16, padding: '16px 18px' }} aria-label="Game settings">
               <button
                 className="setup-settings-toggle"
@@ -624,6 +697,7 @@ export default function Home() {
                 </div>
               ) : null}
             </section>
+            ) : null}
           </div>
         </div>
 
