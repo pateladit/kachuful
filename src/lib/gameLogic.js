@@ -26,6 +26,8 @@ export const TRUMPS = [
   { id: 'none',     glyph: '⚬', name: 'No Trump', label: 'NT',             red: false, nt: true  },
 ]
 
+export const trumpById = new Map(TRUMPS.map(t => [t.id, t]))
+
 // For each name, return the shortest prefix unique among all names.
 export function disambiguateInitials(names) {
   const lower = names.map(n => n.toLowerCase())

@@ -440,10 +440,18 @@ Design intent captured before the `/frontend-design` pass on `BidEntry`, `Playin
 
 - **BidEntry chip strip — done players**: players who have already bid should remain clearly readable (name + bid number visible), not strongly faded. The chip can de-emphasise slightly to let the active player stand out, but the bid value must stay legible — the table is watching and cross-checking each other's calls.
 - **Running tab layout**: breakpoint is **1100px viewport width**. Above 1100px: running tab is a sticky right sidebar (~380px fixed), spotlight/entry takes the remaining left column, hero cards and footer span full width. Below 1100px: running tab stacks below the spotlight as today. Round column is `position: sticky; left: 0` (opaque bg) so it stays anchored when the table scrolls horizontally for many players. No JS needed — pure CSS grid + media query. Applies to BidEntry, PlayingScreen, and ResultsEntry.
-- **Execution order**: (1) Composition — extract `GameHeader`, `HeroCards`, `RunningTab`, shared `gameColors.js`; (2) discussion-first redesign per component; (3) quality passes (`/react-best-practices`, `/web-design-guidelines`, `/composition-patterns`).
+- **Execution order**: (1) Composition — extract `GameHeader`, `HeroCards`, `RunningTab`, shared `gameColors.js`; (2) **discussion-first `/frontend-design` pass** (must use the skill, not just manual redesign); (3) quality passes (`/react-best-practices`, `/web-design-guidelines`, `/composition-patterns`).
 - **Do not touch**: `GameOverSplash` (already the best screen), running tab data structure, footer CTA button positioning/sizing.
-- **Progress**: BidEntry ✓ done Session 18. PlayingScreen ✓ done Session 19. ResultsEntry — next.
-- **Pending deep dives** (cover during game flow walkthrough): StatsModal (5-section stat breakdown), SummaryModal / Game Summary page — both need a `/frontend-design` pass and purpose discussion similar to BidEntry.
+- **"Felt Table" aesthetic** (established Session 20): diamond lattice background at 2% opacity; per-suit page background bleed (♠ cold steel, ♦ amber-warm, ♣ olive-green, ♥ deep crimson, NT neutral) via `trumpTint().pageBleed` + `transition: background 0.9s`; watermark glyph on trump card; suit flavor labels ("cold · commanding" etc.); active chip breathing ring (`.bid-chip-active`); player-color fill on selected bid button; radial glow spotlight from active player's color. All implemented in `gameColors.js` + `BidEntry.jsx`.
+
+#### /frontend-design pending — start each with discussion before implementing
+| Screen | Status | Notes |
+|--------|--------|-------|
+| `BidEntry.jsx` | ⚠ Needs `/frontend-design` pass | Layout + logic reworked (Sessions 18–20) but `/frontend-design` skill not used. Re-run the skill for a proper aesthetic review. |
+| `PlayingScreen.jsx` | ⚠ Needs `/frontend-design` pass | Redesigned Session 19 but skill not used. |
+| `ResultsEntry.jsx` | ⚠ Needs `/frontend-design` pass | Not yet redesigned — next up. |
+| `StatsModal.jsx` | ⚠ Needs `/frontend-design` pass | 5-section stat breakdown; purpose + aesthetics need the full skill treatment. |
+| `SummaryModal.jsx` | ⚠ Needs `/frontend-design` pass | Game Summary overlay; purpose discussion + redesign needed. |
 
 ### Preview / Verification Limitation
 The preview browser (`preview_start` / `preview_screenshot`) has no Supabase session, so every route behind `ProtectedRoute` redirects to `/login` and renders a blank `#root`. This means:

@@ -414,6 +414,7 @@
 .bid-btn-forbidden {
   position: relative;
   overflow: hidden;
+  box-shadow: 0 0 10px -2px color-mix(in oklab, var(--color-accent-2) 40%, transparent);
 }
 
 /* Diagonal red strike-through overlay */
@@ -472,12 +473,29 @@
 /* Seat team toggle badge (custom mode) */
 .setup-seat-team-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
-/* CTA buttons (Enter Results, Resume Round) */
-.game-cta-btn { touch-action: manipulation; }
+/* CTA buttons (Enter Results, Resume Round, Lock & Play) */
+.game-cta-btn { touch-action: manipulation; transition: opacity 0.15s; }
+.game-cta-btn:hover:not(:disabled) { opacity: 0.88; }
 .game-cta-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
 
 /* Expand/collapse toggle in running tab */
 .game-expand-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* Active bid chip — breathing ring via compositor-friendly pseudo-element */
+@keyframes chip-breathe {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50%       { opacity: 0;   transform: scale(1.22); }
+}
+.bid-chip-active { position: relative; }
+.bid-chip-active::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 999px;
+  border: 1.5px solid color-mix(in oklab, var(--color-accent) 65%, transparent);
+  animation: chip-breathe 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
 
 /* Honour prefers-reduced-motion across all game animations */
 @media (prefers-reduced-motion: reduce) {

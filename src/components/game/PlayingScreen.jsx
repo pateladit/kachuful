@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useCountUp } from '../../hooks/useCountUp'
 import Avatar from './Avatar'
 import GameTimer from './GameTimer'
@@ -7,6 +7,7 @@ import StatsModal from './StatsModal'
 import AccountMenu from '../AccountMenu'
 import {
   TRUMPS,
+  trumpById,
   computeTotals,
   computeRanks,
   scoreFor,
@@ -53,7 +54,7 @@ function AnimatedTotal({ value }) {
 
 // ── Stats sub-components ────────────────────────────────────────────────────
 
-function StreakCard({ completedRounds, topStreak }) {
+const StreakCard = React.memo(function StreakCard({ completedRounds, topStreak }) {
   return (
     <div style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 20, padding: '20px 22px' }}>
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted }}>Hottest streak</div>
@@ -75,9 +76,9 @@ function StreakCard({ completedRounds, topStreak }) {
       )}
     </div>
   )
-}
+})
 
-function BiggestBidCard({ biggest }) {
+const BiggestBidCard = React.memo(function BiggestBidCard({ biggest }) {
   return (
     <div style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 20, padding: '20px 22px' }}>
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted }}>Biggest bid called</div>
@@ -100,9 +101,9 @@ function BiggestBidCard({ biggest }) {
       )}
     </div>
   )
-}
+})
 
-function DealerBurdenCard({ recent3 }) {
+const DealerBurdenCard = React.memo(function DealerBurdenCard({ recent3 }) {
   return (
     <div style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 20, padding: '20px 22px' }}>
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, marginBottom: 12 }}>Dealer&#8217;s burden</div>
@@ -122,7 +123,7 @@ function DealerBurdenCard({ recent3 }) {
       </div>
     </div>
   )
-}
+})
 
 function PauseOverlay({ paused, onToggle, roundNumber, trump, cards, pauseMm, pauseSs }) {
   const resumeRef = useRef(null)
@@ -229,9 +230,10 @@ export default function PlayingScreen({
   const sorted  = useMemo(() => [...players].sort((a, b) => totals[b.id] - totals[a.id]), [players, totals])
   const leaderId = sorted[0]?.id
 
-  const totalScores = useMemo(() => players.map(p => totals[p.id]), [players, totals])
-  const minTotal = Math.min(...totalScores)
-  const maxTotal = Math.max(...totalScores)
+  const { totalScores, minTotal, maxTotal } = useMemo(() => {
+    const scores = players.map(p => totals[p.id])
+    return { totalScores: scores, minTotal: Math.min(...scores), maxTotal: Math.max(...scores) }
+  }, [players, totals])
 
   const cards      = pendingRound?.cards ?? 0
   const sumOfBids  = useMemo(() => players.reduce((acc, p) => acc + (pendingRound?.bids[p.id] ?? 0), 0), [players, pendingRound])
@@ -410,7 +412,7 @@ export default function PlayingScreen({
                   ) : null}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                     <Avatar player={p} size={32} isDealer={i === dealerIdx} />
-                    <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15, color: V.ink }}>{p.displayName}</span>
+                    <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15, color: V.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{p.displayName}</span>
                   </div>
                   <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 52, letterSpacing: '-0.02em', lineHeight: 1, color: V.ink, fontVariantNumeric: 'tabular-nums' }}>
                     {pendingRound?.bids[p.id] ?? '—'}
@@ -454,7 +456,7 @@ export default function PlayingScreen({
                 </thead>
                 <tbody>
                   {tabRounds.map(r => {
-                    const tr = TRUMPS.find(t => t.id === r.trump)
+                    const tr = trumpById.get(r.trump)
                     return (
                       <tr key={r.id}>
                         <td
@@ -534,7 +536,7 @@ export default function PlayingScreen({
                   onClick={() => setExpanded(e => !e)}
                   aria-expanded={expanded}
                   style={{ background: 'transparent', border: `1px solid ${V.line}`, color: V.ink2, fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', padding: '6px 14px', borderRadius: 999, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5, touchAction: 'manipulation' }}
-                  className="game-expand-btn"
+                  className="game-icon-btn game-expand-btn"
                 >
                   {expanded ? 'Collapse' : `All ${completedRounds.length} rounds`}
                   <span aria-hidden style={{ display: 'inline-block', transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform .25s ease' }}>↓</span>
