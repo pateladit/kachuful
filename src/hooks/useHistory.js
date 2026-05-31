@@ -20,7 +20,7 @@ export function useHistory() {
       const { data, error: err } = await supabase
         .from('games')
         .select(`
-          id, name, scoring_variant, status, started_at, ended_at, created_at,
+          id, name, scoring_variant, game_type, game_subtype, status, started_at, ended_at, created_at,
           game_players ( id, display_name, color, seat_order, user_id ),
           rounds (
             id, round_number, cards_dealt, trump_suit, dealer_id,
