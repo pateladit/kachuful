@@ -309,6 +309,18 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
     5. **Signup summary** — weekly Monday 9 AM PT; weekly new user signup counts from Supabase
     6. **Anon nudge** — weekly Monday 9 AM PT; counts anonymous users with ≥2 games who haven't upgraded
 
+- **Session 13** — accessibility pass (web-design-guidelines audit):
+  - `aria-label` on all icon-only buttons: color swatches, ↑↓ reorder, × remove, cut-for-dealer cards, color picker swatches, Stepper −/+
+  - `aria-pressed` on game type toggle, deck selector (1/2), no-trump toggle, color picker swatches
+  - `role="radio"` + `aria-checked` on game selection and scoring variant buttons
+  - `aria-expanded` on color swatch trigger; `aria-live="polite"` on Stepper value display
+  - `focus-visible` rings on all inputs (`Login.jsx`, `Home.jsx`) and all icon buttons
+  - `autocomplete` + `name` attributes on all form inputs; `spellCheck={false}` on email; `htmlFor` wired to game name label
+  - `Stepper` component accepts `label` prop for descriptive aria-labels
+  - Placeholder text ends with `…` on guest name, game name, player name inputs
+  - `color-scheme: dark` on `<html>` — native scrollbars and selects adopt dark theme
+  - `<meta name="theme-color" content="#2a1620">` — mobile browser chrome matches app background
+
 ## Tooling & Workflow
 
 ### Production URL
