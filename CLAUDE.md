@@ -366,6 +366,23 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
     - `font-variant-numeric: tabular-nums` on all score/count numbers
     - `translate="no"` on brand and game names
 
+- **Session 20** — BidEntry "Felt Table" redesign + audit sweep (BidEntry + PlayingScreen):
+  - **`/frontend-design` pass on BidEntry** — "Felt Table" aesthetic established (will carry forward to all game screens):
+    - **Suit-bleed page background**: outer wrapper `background: tint.pageBleed` + `transition: background 0.9s ease`. Page hue shifts with each new trump — ♠ cold steel-blue, ♦ amber-warm, ♣ olive-green, ♥ deep crimson, NT stays neutral. Goal: players associate page mood with the trump before reading the card.
+    - **Diamond lattice**: fixed-position SVG tile at `opacity: 0.022`, consistent with login + history pages.
+    - **Trump card full character**: `overflow: hidden` + 130px watermark glyph (9% opacity) floating behind content; suit flavor label beneath name ("cold · commanding", "flashy · treacherous", "earthy · grounded", "passionate · unforgiving").
+    - **Elevated chip strip**: taller chips — active `~50px`, done `~44px`, pending `~38px`. Active chip gets `.bid-chip-active` breathing ring (compositor-safe `::before` pseudo-element).
+    - **Player-color number pad**: selected bid button fills with `activePlayer.color` (personal palette color, not generic amber). Dark `#2a1620` text works across all 12 colors. Current bid display in spotlight also shows in player's color.
+    - **Radial spotlight glow**: active player spotlight uses `radial-gradient` from `activePlayer.color` anchored near avatar corner.
+  - **`gameColors.js` expanded**: `trumpTint()` now returns `pageBleed`, `labelColor`, `flavor` in addition to existing `bg`/`border`/`glyphColor`. Fully backward-compatible — PlayingScreen continues using existing keys.
+  - **`gameLogic.js`**: exported `trumpById = new Map(TRUMPS.map(t => [t.id, t]))` — O(1) suit lookup, replaces `TRUMPS.find()` in both BidEntry and PlayingScreen.
+  - **Audit fixes applied** (`/web-design-guidelines` + `/react-best-practices` + `/composition-patterns`):
+    - `BidEntry`: `pressedBtnTimerRef` added + cleared on unmount (was leaking); `tabRounds` memoized; `translate="no"` on Ka·Chu·Fu·L brand; active player name gets `overflow: hidden / textOverflow: ellipsis`; Lock button gets `game-cta-btn` class (hover state).
+    - `PlayingScreen`: `StreakCard`, `BiggestBidCard`, `DealerBurdenCard` wrapped in `React.memo` — pause timer ticked 1 re-render/sec, these three cards now skip; `{ totalScores, minTotal, maxTotal }` merged into one `useMemo`; display name overflow protection in locked bid cards; expand button gets `game-icon-btn` class; `trumpById` Map lookup.
+    - `index.css`: `chip-breathe` rewritten using `::before` pseudo-element with `transform`/`opacity` (was `box-shadow`, which triggers repaint); `game-cta-btn` gains `.game-cta-btn:hover` opacity transition; `.bid-btn-forbidden` gains ambient red `box-shadow` glow.
+  - **Composition findings** (deferred to next session): `RunningTab` table is ~130 lines duplicated between BidEntry and PlayingScreen (and will repeat in ResultsEntry). Extract as shared `RunningTab` component with `currentRoundSlot` render prop for the phase-specific row. `GameHeader` wrapper also worth extracting once all three screens are redesigned.
+  - **CLAUDE.md**: Track 2 table updated — all 5 screens marked `⚠ Needs /frontend-design pass`; Felt Table aesthetic documented.
+
 - **Session 19** — PlayingScreen redesign + audit fixes:
   - `PlayingScreen.jsx` full redesign (discussion-first, matching BidEntry's design language):
     - **Layout**: `.game-content` two-column grid — locked bids left, running tab as sticky right sidebar at ≥1100px; stacks below at <1100px. Stats row (3 cards) spans full width below `.game-content`. Footer 2-column (hint left, Enter Results right).
@@ -444,14 +461,18 @@ Design intent captured before the `/frontend-design` pass on `BidEntry`, `Playin
 - **Do not touch**: `GameOverSplash` (already the best screen), running tab data structure, footer CTA button positioning/sizing.
 - **"Felt Table" aesthetic** (established Session 20): diamond lattice background at 2% opacity; per-suit page background bleed (♠ cold steel, ♦ amber-warm, ♣ olive-green, ♥ deep crimson, NT neutral) via `trumpTint().pageBleed` + `transition: background 0.9s`; watermark glyph on trump card; suit flavor labels ("cold · commanding" etc.); active chip breathing ring (`.bid-chip-active`); player-color fill on selected bid button; radial glow spotlight from active player's color. All implemented in `gameColors.js` + `BidEntry.jsx`.
 
-#### /frontend-design pending — start each with discussion before implementing
+#### /frontend-design status — always discussion-first before implementing
 | Screen | Status | Notes |
 |--------|--------|-------|
-| `BidEntry.jsx` | ⚠ Needs `/frontend-design` pass | Layout + logic reworked (Sessions 18–20) but `/frontend-design` skill not used. Re-run the skill for a proper aesthetic review. |
-| `PlayingScreen.jsx` | ⚠ Needs `/frontend-design` pass | Redesigned Session 19 but skill not used. |
-| `ResultsEntry.jsx` | ⚠ Needs `/frontend-design` pass | Not yet redesigned — next up. |
+| `BidEntry.jsx` | ⚠ Needs `/frontend-design` pass | Felt Table aesthetic applied manually Session 20 — still needs the proper skill pass for a formal aesthetic review + any missed opportunities. |
+| `PlayingScreen.jsx` | ⚠ Needs `/frontend-design` pass | Redesigned Session 19 but skill not used. Also needs Felt Table treatment (suit-bleed, lattice, watermark, flavor label) from `trumpTint()` — all hooks already in `gameColors.js`. |
+| `ResultsEntry.jsx` | ⚠ Needs `/frontend-design` pass | Not yet redesigned — **next up**. Felt Table aesthetic should carry through. Running tab already shares `.game-content`/`.game-tab-sidebar` layout. |
 | `StatsModal.jsx` | ⚠ Needs `/frontend-design` pass | 5-section stat breakdown; purpose + aesthetics need the full skill treatment. |
 | `SummaryModal.jsx` | ⚠ Needs `/frontend-design` pass | Game Summary overlay; purpose discussion + redesign needed. |
+
+#### Composition — deferred to after all /frontend-design passes are done
+- **Extract `RunningTab`**: ~130 lines of identical table markup in BidEntry + PlayingScreen (+ future ResultsEntry). Use `currentRoundSlot` prop for the phase-specific current-round row. Eliminates the duplication and gives ResultsEntry the component for free.
+- **Extract `GameHeader`**: Ka·Chu·Fu·L brand lockup + round subheading shared across all three screens. Phase-specific buttons passed as children.
 
 ### Preview / Verification Limitation
 The preview browser (`preview_start` / `preview_screenshot`) has no Supabase session, so every route behind `ProtectedRoute` redirects to `/login` and renders a blank `#root`. This means:
@@ -466,6 +487,13 @@ The preview browser (`preview_start` / `preview_screenshot`) has no Supabase ses
 - **Free Form Entry game — setup page** ✓ done Session 18
 - **Free Form Entry game — game loop** (after setup): round structure (no trump/bid mechanics); scorekeeper enters a raw score per player or per team per round; round_results.score stored directly; running totals shown; End Game same as Ka Chu Fu L
 - **Offline support** — defer; internet connection assumed for now
+- **Session 21 next steps** (in order):
+  1. `/frontend-design` pass on `PlayingScreen.jsx` — apply Felt Table (suit-bleed, lattice, watermark, flavor label); all hooks already in `gameColors.js`, just wire them up the same way as BidEntry
+  2. `/frontend-design` pass on `ResultsEntry.jsx` — discussion-first (open-grid vs spotlight model for player entry, running tab sidebar, MVP section, standings); Felt Table carries through
+  3. `/frontend-design` pass on `StatsModal.jsx` — 5-section stat breakdown; purpose + layout redesign
+  4. `/frontend-design` pass on `SummaryModal.jsx` — overlay purpose discussion + redesign
+  5. After all four are done: extract shared `RunningTab` + `GameHeader` components (composition cleanup)
+  6. Run `/web-design-guidelines` + `/react-best-practices` + `/composition-patterns` audit on each screen after its `/frontend-design` pass
 - **Multi-device sessions** — each player connects on their own phone to view status and submit bids; major architecture pivot, very future
 - **3 of Spades rules** — scoring, round structure, and game loop to be defined and implemented
 - **Board game support** — free-form entry scoring model; specific games TBD
