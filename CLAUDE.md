@@ -1,9 +1,12 @@
-# Score Tracker — Ka Chu Fu L & more
+# Ujagro — Game Night Score Tracker
 
-A multi-game companion app for score keeping and data entry, screen-shared to a TV.
-Currently supports **Ka Chu Fu L** (Judgement) with infrastructure for additional card games
-and board games. One logged-in scorekeeper runs the app; all player seats are entered manually.
-No multi-device sync required.
+**Ujagro** ("to illuminate / awaken" in Gujarati) is a multi-game companion app for score
+keeping and data entry, screen-shared to a TV. Currently supports **Ka Chu Fu L** (Judgement)
+with infrastructure for additional card and board games. One logged-in scorekeeper runs the
+app; all player seats are entered manually. No multi-device sync required.
+
+- **Tagline**: "Where every game night begins." / *જ્યાં રાત શરૂ થાય.*
+- **Production URL**: https://kachuful-eight.vercel.app
 
 ## Tech Stack
 
@@ -283,6 +286,12 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
 | `kachufull` | card | Full support | Judgement / Oh Hell; complete game loop |
 | `spades3` | card | Placeholder | 3 of Spades; rules/scoring not yet configured |
 | *(board games)* | board | Placeholder | Coming soon; free-form scoring model planned |
+
+- **Session 11** — branding + auth fixes:
+  - App renamed to **Ujagro**; tagline "Where every game night begins." / *જ્યાં રાત શરૂ થાય.*
+  - Login hero updated; nav headers across all pages (Home, History, Game, Admin, Preferences) updated to Ujagro; game-specific Ka·Chu·Fu·L labels left intact
+  - Google OAuth redirect fixed: Supabase Site URL + Redirect URLs updated to `https://kachuful-eight.vercel.app`
+  - `game_type` / `game_subtype` columns confirmed added via `add_multi_game_type.sql` migration (resolves "column does not exist" error on History page)
 
 ## Deferred / Future
 
