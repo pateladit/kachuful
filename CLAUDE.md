@@ -358,6 +358,27 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
     - `font-variant-numeric: tabular-nums` on all score/count numbers
     - `translate="no"` on brand and game names
 
+- **Session 16** — Setup page react-best-practices + web-design-guidelines audit + fixes:
+  - **CSS** (`index.css`): 18 new `.setup-*` classes — `:hover` transitions, `:focus-visible` rings (2px amber outline), `touch-action: manipulation` on all interactive elements; removes all JS `onMouseEnter/Leave` style mutations from the page
+  - **Semantic HTML**: page body `<div>` → `<main>`; seats strip + config cards wrapped in `<section aria-label="…">`
+  - **ARIA fixes**: `role="radiogroup"` wrapper on card game radio buttons; `aria-expanded` + `aria-controls="adv-settings"` on settings toggle; `aria-hidden` on decorative arrows/glyphs; color swatch `aria-label` now uses human name (e.g. `"amber"`) via `COLOR_NAMES` map instead of raw hex
+  - **Focus**: `outline: 'none'` removed from both inputs; focus handled by `.setup-name-input:focus` / `.setup-game-name-input:focus` CSS
+  - **`transition: 'all'`** removed from tab switcher → explicit `background`, `color` in CSS class
+  - **React**: `SeatAvatar`, `SeatEditor`, `Stepper` wrapped in `memo`; `addPlayer`, `removePlayer`, `updatePlayer`, `assignDealer`, `closeEditor`, `toggleAdv`, `dismissBanner` in `useCallback`; `usedNames` + `hints` in `useMemo`
+  - **`useEffect` deps**: removed all `eslint-disable-line` suppression comments; proper dependency arrays
+  - **JSX**: all `{x && <el>}` → `{x ? <el> : null}` throughout
+
+- **Post-Session 15** — Setup page full redesign — "The Pre-Game Huddle" (`Home.jsx`):
+  - **Layout**: non-sequential two-column grid — all config visible without scrolling; seats strip at top as the hero interaction; config cards below; sticky header with ← History link; sticky bottom bar with live blocking hints + Start Game button
+  - **Player seats**: seat cards (86×86) with avatar + name; tap to open inline `SeatEditor` popover with name input (Tab-to-autocomplete from suggestions), Colors tab (12-color palette) + Emojis tab (24 emoji avatars); dealer badge shown on assigned seat card; × remove button appears on hover (only when >2 players); click-outside closes editor
+  - **Config cards**:
+    - Game selection: pill buttons for card games + compact board game chips (Catan, Ticket to Ride, Pandemic as "Soon" tiles)
+    - Dealer: single "Assign randomly 🎲" button → shows result + ↻ Again (replaces cut-for-dealer card mechanic)
+    - Game name: bottom-border-only input, consistent with login style
+    - Settings: collapsed by default, toggle to expand scoring/rules/rounds config
+  - **Sticky bar**: live blocking hints ("2 players need a name · assign a dealer") clear to "N players · ready ✓" when all conditions met; Start Game activates only when all conditions met
+  - **Preserved**: all Supabase INSERT logic, `game_type` + `game_subtype` in insert, anonymous upgrade banner, all accessibility attrs, Stepper component
+
 ## Tooling & Workflow
 
 ### Production URL

@@ -199,6 +199,124 @@
 }
 .hist-try-again:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 2px; }
 
+/* Setup page — interactive states */
+.setup-back-link {
+  touch-action: manipulation;
+  transition: color 0.15s;
+}
+.setup-back-link:hover { color: var(--color-ink-2) !important; }
+.setup-back-link:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 2px; }
+
+.setup-seat-btn {
+  touch-action: manipulation;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.setup-seat-btn:hover:not([aria-expanded="true"]) { border-color: var(--color-muted) !important; }
+.setup-seat-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.setup-remove-btn {
+  touch-action: manipulation;
+  transition: border-color 0.15s, color 0.15s;
+}
+.setup-remove-btn:hover { border-color: var(--color-accent-2) !important; color: var(--color-accent-2) !important; }
+.setup-remove-btn:focus-visible { outline: 2px solid var(--color-accent-2); outline-offset: 2px; }
+
+.setup-add-btn {
+  touch-action: manipulation;
+  transition: border-color 0.2s, color 0.2s;
+}
+.setup-add-btn:hover { border-color: var(--color-accent) !important; color: var(--color-accent) !important; }
+.setup-add-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.setup-suggestion-btn {
+  touch-action: manipulation;
+  transition: border-color 0.15s, color 0.15s;
+}
+.setup-suggestion-btn:hover { border-color: var(--color-accent) !important; color: var(--color-accent) !important; }
+.setup-suggestion-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.setup-tab-btn {
+  touch-action: manipulation;
+  transition: background 0.15s, color 0.15s;
+}
+.setup-tab-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; border-radius: 7px; }
+
+.setup-color-swatch {
+  touch-action: manipulation;
+  transition: transform 0.15s;
+}
+.setup-color-swatch:hover { transform: scale(1.15); }
+.setup-color-swatch:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
+
+.setup-emoji-btn {
+  touch-action: manipulation;
+  transition: border-color 0.15s, background 0.15s;
+}
+.setup-emoji-btn:hover { border-color: var(--color-muted) !important; }
+.setup-emoji-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.setup-game-btn {
+  touch-action: manipulation;
+  transition: border-color 0.2s;
+}
+.setup-game-btn:hover:not(:disabled):not([aria-checked="true"]) { border-color: var(--color-muted) !important; }
+.setup-game-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.setup-dealer-btn {
+  touch-action: manipulation;
+  transition: border-color 0.2s;
+}
+.setup-dealer-btn:hover { border-color: var(--color-muted) !important; }
+.setup-dealer-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.setup-again-btn {
+  touch-action: manipulation;
+}
+.setup-again-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 2px; }
+
+.setup-settings-toggle {
+  touch-action: manipulation;
+}
+.setup-settings-toggle:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 4px; }
+
+.setup-scoring-btn {
+  touch-action: manipulation;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, font-weight 0.15s;
+}
+.setup-scoring-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.setup-deck-btn {
+  touch-action: manipulation;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, font-weight 0.15s;
+}
+.setup-deck-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.setup-stepper-btn {
+  touch-action: manipulation;
+  transition: border-color 0.15s;
+}
+.setup-stepper-btn:hover:not(:disabled) { border-color: var(--color-muted) !important; }
+.setup-stepper-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.setup-start-btn {
+  touch-action: manipulation;
+  transition: opacity 0.2s;
+}
+.setup-start-btn:hover:not(:disabled) { opacity: 0.88 !important; }
+.setup-start-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.setup-name-input {
+  caret-color: var(--color-accent);
+  transition: border-color 0.2s;
+}
+.setup-name-input:focus { border-color: var(--color-accent) !important; outline: none; }
+
+.setup-game-name-input {
+  caret-color: var(--color-accent);
+  transition: border-bottom-color 0.2s;
+}
+.setup-game-name-input:focus { border-bottom-color: var(--color-accent) !important; outline: none; }
+
 /* Game-over splash entrance */
 @keyframes splash-in {
   0%   { opacity: 0; transform: translateY(24px) scale(0.92); }
