@@ -121,6 +121,12 @@ remains correct even if the scoring_variant is ever corrected on the game row.
 Ka Chu Fu L-specific columns (`scoring_variant` … `first_dealer_seat`) remain for backward compat.
 New game types store their config in `game_config` (JSONB).
 
+New columns planned for Free Form Entry support (migration: `supabase/add_freeform_game.sql`):
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `team_mode` | text nullable | `'none'` \| `'alternating'` \| `'custom'` — null means no teams |
+
 ### game_players — key columns
 
 | Column | Type | Notes |
@@ -129,6 +135,7 @@ New game types store their config in `game_config` (JSONB).
 | `user_id` | uuid nullable | Links to `profiles.id` for RLS. NULL for non-account players. |
 | `color` | text | Hex from the 12-color palette (see Design System) |
 | `seat_order` | int | 0-based clockwise seat index |
+| `team` | smallint nullable | `1` or `2` for team assignment; null when `team_mode = 'none'` |
 
 `guest_name` column from earlier design is replaced by `display_name` universally.
 
@@ -284,6 +291,7 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
 | Subtype | Category | Status | Notes |
 |---------|----------|--------|-------|
 | `kachufull` | card | Full support | Judgement / Oh Hell; complete game loop |
+| `freeform` | card | Setup only | Free Form Entry; scorekeeper enters scores per player/team per round; game loop TBD |
 | `spades3` | card | Placeholder | 3 of Spades; rules/scoring not yet configured |
 | *(board games)* | board | Placeholder | Coming soon; free-form scoring model planned |
 
@@ -358,7 +366,7 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
     - `font-variant-numeric: tabular-nums` on all score/count numbers
     - `translate="no"` on brand and game names
 
-- **Session 17** — Composition patterns polish + frequent-player suggestions:
+- **Session 17** — Composition patterns polish + frequent-player suggestions + Free Form Entry planning:
   - **Login.jsx** (`patterns-explicit-variants`): extracted `SignInPanel`, `SignUpPanel`, `GuestPanel` as explicit variant components — render method reduced to 3 clean ternary lines; each panel is self-documenting and independently readable
   - **History.jsx** (`architecture-avoid-boolean-props`): split `GameTile` boolean-prop component into `AvailableGameTile` (interactive `<button>`, count, hover) and `ComingSoonGameTile` (inert `<div>`, "Soon" badge); shared `tileBaseStyle` constant
   - **Frequent-player suggestions** (`useFrequentPlayers` hook + `SeatEditor`):
@@ -397,6 +405,8 @@ Routines use the **Supabase MCP** connector (credentials stored securely by Anth
 
 ## Deferred / Future
 
+- **Free Form Entry game — setup page** (next): add `freeform` subtype to Setup page (`Home.jsx`) with config card showing: game name input (shared), decks stepper (shared), team mode toggle (None / Alternating / Custom); Custom mode adds A/B team badge to each seat card in the players strip; `canStart` gated to `freeform` once setup is complete; migration `supabase/add_freeform_game.sql` adds `games.team_mode` (text nullable) and `game_players.team` (smallint nullable); alternating teams auto-assigned on game start (seats 0,2,4… = team 1; seats 1,3,5… = team 2); custom teams set by host in setup; game INSERT writes `team_mode` to `games`, `team` to each `game_players` row
+- **Free Form Entry game — game loop** (after setup): round structure (no trump/bid mechanics); scorekeeper enters a raw score per player or per team per round; round_results.score stored directly; running totals shown; End Game same as Ka Chu Fu L
 - **Offline support** — defer; internet connection assumed for now
 - **Multi-device sessions** — each player connects on their own phone to view status and submit bids; major architecture pivot, very future
 - **3 of Spades rules** — scoring, round structure, and game loop to be defined and implemented
