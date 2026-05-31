@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Avatar from './Avatar'
 import GameTimer from './GameTimer'
 import SummaryModal from './SummaryModal'
@@ -49,7 +49,14 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
   const [statsOpen, setStatsOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [pressedBtn, setPressedBtn] = useState(null)
   const advanceBidTimerRef = useRef(null)
+
+  const handleBidPress = useCallback((playerIdx, num) => {
+    setPressedBtn(`${playerIdx}-${num}`)
+    setTimeout(() => setPressedBtn(null), 220)
+    setBid(playerIdx, num)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Bid order: (dealerIdx+1)%n, ..., dealerIdx
   const n = players.length
@@ -461,7 +468,9 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
             }}>
               {/* Player header */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 22 }}>
-                <Avatar player={activePlayer} size={72} isDealer={active === dealerIdx} glow />
+                <div className="avatar-pulse" style={{ borderRadius: '50%' }}>
+                  <Avatar player={activePlayer} size={72} isDealer={active === dealerIdx} glow />
+                </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 30, color: V.ink, letterSpacing: '-0.02em', lineHeight: 1 }}>
                     {activePlayer.displayName}
@@ -497,8 +506,9 @@ export default function BidEntry({ game, players, completedRounds, pendingRound,
                     <button
                       key={num}
                       disabled={isForbidden && !isSelected}
-                      onClick={() => { if (!isForbidden) setBid(active, num) }}
+                      onClick={() => { if (!isForbidden) handleBidPress(active, num) }}
                       title={isForbidden ? "Can't bid this — would make sum equal cards" : ''}
+                      className={pressedBtn === `${active}-${num}` ? 'bid-press' : ''}
                       style={{
                         flex: '1 0 auto',
                         minWidth: 56,

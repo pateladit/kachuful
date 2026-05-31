@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useCountUp } from '../../hooks/useCountUp'
 import Avatar from './Avatar'
 import GameTimer from './GameTimer'
 import SummaryModal from './SummaryModal'
@@ -42,6 +43,11 @@ function rankBg(rank, n) {
   const t = (rank - 1) / (n - 1)
   const base = `color-mix(in oklab, #ef4444 ${Math.round(t * 100)}%, #22c55e)`
   return `color-mix(in oklab, ${base} 40%, transparent)`
+}
+
+function AnimatedTotal({ value, style }) {
+  const displayed = useCountUp(value, { duration: 700 })
+  return <span style={style}>{displayed}</span>
 }
 
 export default function PlayingScreen({
@@ -317,7 +323,7 @@ export default function PlayingScreen({
                   <td style={{ padding: '10px 6px', paddingLeft: 16, background: V.surface, fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, fontWeight: 600, borderRight: `1px solid ${V.line}`, borderTop: `1px solid ${V.line}` }}>TOTAL</td>
                   {players.map((p, pi) => (
                     <td key={p.id} style={{ padding: '10px 6px', background: rankBg(ranks[p.id]?.rank, players.length), textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17, color: totalColor(totals[p.id], minTotal, maxTotal), borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none', borderTop: `1px solid ${V.line}` }}>
-                      {totals[p.id]}
+                      <AnimatedTotal value={totals[p.id]} />
                     </td>
                   ))}
                 </tr>

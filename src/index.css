@@ -50,3 +50,33 @@
 }
 .flash-made { animation: flash-made 1s ease forwards; }
 .flash-miss { animation: flash-miss 1s ease forwards; }
+
+/* Bid number pad — press ripple */
+@keyframes ripple {
+  0%   { transform: scale(0.88); opacity: 0.6; }
+  60%  { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+.bid-press { animation: ripple 0.22s ease forwards; }
+
+/* Active player avatar pulse */
+@keyframes avatar-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-accent) 60%, transparent); }
+  50%       { box-shadow: 0 0 0 6px color-mix(in oklab, var(--color-accent) 0%, transparent); }
+}
+.avatar-pulse { animation: avatar-pulse 1.8s ease-in-out infinite; }
+
+/* Rank delta badge slide-in */
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.rank-delta { animation: slide-in-right 0.3s ease forwards; }
+
+/* Score count-up pop */
+@keyframes score-pop {
+  0%   { transform: scale(0.8);  opacity: 0; }
+  70%  { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+.score-pop { animation: score-pop 0.35s ease forwards; }

@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { useCountUp } from '../../hooks/useCountUp'
 import Avatar from './Avatar'
 import GameTimer from './GameTimer'
 import SummaryModal from './SummaryModal'
@@ -30,6 +31,11 @@ function rankBg(rank, n) {
   const t = (rank - 1) / (n - 1)
   const base = `color-mix(in oklab, #ef4444 ${Math.round(t * 100)}%, #22c55e)`
   return `color-mix(in oklab, ${base} 40%, transparent)`
+}
+
+function AnimatedScore({ value, className = '', style = {} }) {
+  const displayed = useCountUp(value, { duration: 500, enabled: value > 0 })
+  return <span className={className} style={style}>{displayed}</span>
 }
 
 export default function ResultsEntry({
@@ -308,7 +314,7 @@ export default function ResultsEntry({
                       {isSet ? (made ? '● MADE' : '● MISSED') : '● PENDING'}
                     </span>
                     <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: isSet ? (made ? V.accent3 : V.accent2) : V.muted }}>
-                      {isSet ? (made ? `+${earned}` : '0') : '—'}
+                      {isSet ? (made ? <><span>+</span><AnimatedScore value={earned} className="score-pop" /></> : '0') : '—'}
                     </span>
                   </div>
                 </div>
@@ -330,7 +336,7 @@ export default function ResultsEntry({
                 Bid <b style={{ color: V.ink }}>{mvp.bid}</b> · took <b style={{ color: V.ink }}>{mvp.took}</b> · earned the most points this round
               </div>
               <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 42, letterSpacing: '-0.02em', color: V.accent }}>
-                +{mvp.pts}<small style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, letterSpacing: '.12em', color: V.muted, marginLeft: 8 }}>POINTS</small>
+                +<AnimatedScore value={mvp.pts} className="score-pop" /><small style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, letterSpacing: '.12em', color: V.muted, marginLeft: 8 }}>POINTS</small>
               </div>
             </div>
           ) : (
@@ -361,12 +367,12 @@ export default function ResultsEntry({
                     <Avatar player={p} size={26} />
                     <div style={{ flex: 1, fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, color: V.ink }}>{p.displayName}</div>
                     <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: isLeader ? V.accent : V.ink }}>
-                      {totalsAfter[p.id]}
+                      <AnimatedScore value={totalsAfter[p.id]} />
                       <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, marginLeft: 4, color: gain === 0 ? V.muted : V.accent3 }}>
                         {gain > 0 ? `+${gain}` : gain === 0 ? '—' : gain}
                       </span>
                     </div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: delta > 0 ? V.accent3 : delta < 0 ? V.accent2 : V.muted, width: 52, textAlign: 'right' }}>
+                    <div className={delta !== 0 ? 'rank-delta' : ''} style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: delta > 0 ? V.accent3 : delta < 0 ? V.accent2 : V.muted, width: 52, textAlign: 'right' }}>
                       {delta > 0 ? `▲ ${delta}` : delta < 0 ? `▼ ${Math.abs(delta)}` : '— same'}
                     </div>
                   </div>
