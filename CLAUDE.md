@@ -366,6 +366,22 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
     - `font-variant-numeric: tabular-nums` on all score/count numbers
     - `translate="no"` on brand and game names
 
+- **Session 18** — Free Form Entry setup + BidEntry redesign:
+  - `supabase/add_freeform_game.sql` migration: adds `games.team_mode` (text, check `none|alternating|custom`) and `game_players.team` (smallint, check 1|2). Applied to production.
+  - `Home.jsx`: added `freeform` as available card game; `teamMode` state (`none`/`alternating`/`custom`); Team Mode config card (radio-style three-way toggle) shown only when freeform selected; seat cards show A/B badges (alternating = static, custom = tappable toggle); Dealer section and Advanced Settings hidden for freeform; `canStart` updated (freeform doesn't require dealer); game INSERT writes `team_mode`; game_players INSERT writes `team` per seat.
+  - `CLAUDE.md`: documented preview/auth-guard limitation (`npx vite build --mode development` is the correct verification method); documented Track 2 design notes (chip strip opacity, running tab sidebar layout, pending deep dives for StatsModal + SummaryModal).
+  - `BidEntry.jsx` full redesign:
+    - **Layout**: responsive two-column grid (`.game-content`) — spotlight left, running tab as sticky right sidebar (380px) at ≥1100px; stacks below at <1100px. Round column sticky-left inside horizontal scroll.
+    - **Header**: icon-only modal buttons (36×36, `◍`/`⊞`); leader chip gets 3px player-color left border instead of ★.
+    - **Hero**: trump card is suit-tinted (red = accent2 tint, black = accent tint, NT = muted bg + dashed border), 80px glyph-first, no gradient. Bid sum card leads with progress bar (10px), number below.
+    - **Chip strip**: done players `opacity: 0.78`; done chip restructured — bid number (20px bold) on top, name (9px mono) below; pending `opacity: 0.35`; active full opacity + amber border + pulsing dot.
+    - **Number pad**: 68×76px buttons, 24px font. Forbidden buttons: diagonal red CSS strike (`::after`), shake animation on tap (`forbidden-shake`), no bid registered.
+    - **Footer**: live contextual hint replaces static scoring formula.
+  - `index.css`: added `.game-content`, `.game-tab-sidebar`, `.game-tab-round-cell`, `.bid-btn-forbidden`, `@keyframes forbidden-shake`, `.game-icon-btn`, `.bid-num-btn`, `.bid-chip-btn`, `.setup-seat-team-btn` classes.
+  - **Post-session audit fixes** (`/web-design-guidelines` + `/react-best-practices`):
+    - `BidEntry`: `bidOrder` memoized with `useMemo([n, dealerIdx])`; eslint-disable suppression removed; effect deps now honest `[roundNumber, dealerIdx, n, defaultCards]`; shake timer stored in `shakeBtnTimerRef` with unmount cleanup; `game-icon-btn` class on cards ±/expand buttons for `focus-visible`.
+    - `Home`: `teamMode` reset effect replaced with `selectGame` `useCallback` (no extra render cycle); custom team badge button moved outside seat `<button>` (was invalid nested interactive elements); seat button `aria-label` now includes team assignment when teamMode active; team badge bumped to 22px with `touch-action` and `focus-visible`.
+
 - **Session 17** — Composition patterns polish + frequent-player suggestions + Free Form Entry planning:
   - **Login.jsx** (`patterns-explicit-variants`): extracted `SignInPanel`, `SignUpPanel`, `GuestPanel` as explicit variant components — render method reduced to 3 clean ternary lines; each panel is self-documenting and independently readable
   - **History.jsx** (`architecture-avoid-boolean-props`): split `GameTile` boolean-prop component into `AvailableGameTile` (interactive `<button>`, count, hover) and `ComingSoonGameTile` (inert `<div>`, "Soon" badge); shared `tileBaseStyle` constant
@@ -403,9 +419,26 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
 6 CCR routines run in Anthropic's cloud against the GitHub repo. Manage at `https://claude.ai/code/routines`.
 Routines use the **Supabase MCP** connector (credentials stored securely by Anthropic — not in code) and **Gmail MCP** for email reports to ptladit@gmail.com.
 
+### Track 2 — Game Flow Frontend Design Notes
+Design intent captured before the `/frontend-design` pass on `BidEntry`, `PlayingScreen`, `ResultsEntry`:
+
+- **BidEntry chip strip — done players**: players who have already bid should remain clearly readable (name + bid number visible), not strongly faded. The chip can de-emphasise slightly to let the active player stand out, but the bid value must stay legible — the table is watching and cross-checking each other's calls.
+- **Running tab layout**: breakpoint is **1100px viewport width**. Above 1100px: running tab is a sticky right sidebar (~380px fixed), spotlight/entry takes the remaining left column, hero cards and footer span full width. Below 1100px: running tab stacks below the spotlight as today. Round column is `position: sticky; left: 0` (opaque bg) so it stays anchored when the table scrolls horizontally for many players. No JS needed — pure CSS grid + media query. Applies to BidEntry, PlayingScreen, and ResultsEntry.
+- **Execution order**: (1) Composition — extract `GameHeader`, `HeroCards`, `RunningTab`, shared `gameColors.js`; (2) `/frontend-design` redesign per component with discussion before coding; (3) quality passes (`/react-best-practices`, `/web-design-guidelines`, `/composition-patterns`).
+- **Do not touch**: `GameOverSplash` (already the best screen), running tab data structure, footer CTA button positioning/sizing.
+- **Pending deep dives** (cover during game flow walkthrough): StatsModal (5-section stat breakdown), SummaryModal / Game Summary page — both need a `/frontend-design` pass and purpose discussion similar to BidEntry.
+
+### Preview / Verification Limitation
+The preview browser (`preview_start` / `preview_screenshot`) has no Supabase session, so every route behind `ProtectedRoute` redirects to `/login` and renders a blank `#root`. This means:
+- Navigating to `/`, `/history`, `/game/:id`, etc. will always show a blank page in the preview tool.
+- `preview_console_logs` and `preview_logs` will show no errors — just Vite HMR updates — because the build itself is fine.
+- The correct way to verify a build is: **`npx vite build --mode development`** — a clean exit with module count confirms no compile errors.
+- Visual verification of guarded pages must be done in a real browser where the user is logged in (production URL or `localhost:5173` with an active session).
+- Static demo pages under `public/` (e.g. `public/setup-demo.html`) are not kept in sync with the live React code and should not be used as a proxy for app correctness.
+
 ## Deferred / Future
 
-- **Free Form Entry game — setup page** (next): add `freeform` subtype to Setup page (`Home.jsx`) with config card showing: game name input (shared), decks stepper (shared), team mode toggle (None / Alternating / Custom); Custom mode adds A/B team badge to each seat card in the players strip; `canStart` gated to `freeform` once setup is complete; migration `supabase/add_freeform_game.sql` adds `games.team_mode` (text nullable) and `game_players.team` (smallint nullable); alternating teams auto-assigned on game start (seats 0,2,4… = team 1; seats 1,3,5… = team 2); custom teams set by host in setup; game INSERT writes `team_mode` to `games`, `team` to each `game_players` row
+- **Free Form Entry game — setup page** ✓ done Session 18
 - **Free Form Entry game — game loop** (after setup): round structure (no trump/bid mechanics); scorekeeper enters a raw score per player or per team per round; round_results.score stored directly; running totals shown; End Game same as Ka Chu Fu L
 - **Offline support** — defer; internet connection assumed for now
 - **Multi-device sessions** — each player connects on their own phone to view status and submit bids; major architecture pivot, very future
@@ -414,3 +447,6 @@ Routines use the **Supabase MCP** connector (credentials stored securely by Anth
 - **Emoji retention across games** — add `emoji` column to `game_players` so the SeatEditor can pre-fill the emoji a player used last time, alongside the existing colour pre-fill
 - **Full recurring-player schema** (`saved_players` table) — host can explicitly pin frequent players; schema: `id, user_id, display_name, color, emoji, games_together_count, last_played_at`; upsert after each game; RLS on `user_id`; replaces the lightweight frequency query in `useFrequentPlayers`. Unlocks: pin/unpin UI, richer suggestion ordering, survives game data pruning
 - **Player identity across games** — currently only the host's seat is linked to a Supabase profile (`user_id`); non-host players are anonymous name strings with no cross-game correlation. Long-term: allow non-host players to have accounts so their stats accumulate regardless of who hosts
+- **Group stats in StatsModal / FinalResults** — add a "The Table" section with whole-group stats: how many rounds the group bid over vs under in aggregate (and fun breakdowns); rounds where exactly 1 player failed their bid; rounds where exactly 1 player made their bid; other fun emergent group dynamics
+- **Rank 1 / top scorer visual treatment** — apply amber gradient highlight to the rank-1 row and top scorer chip so first place has a distinctive glow beyond the medal emoji
+- **Tie handling for rank display** — currently only 1 player is shown as rank 1 in cases of a tied total; expand to award the same rank to all tied players and show multiple winners in `GameOverSplash`, `FinalResults` podium, and `History` winner display
