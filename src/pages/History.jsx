@@ -1,32 +1,13 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useHistory } from '../hooks/useHistory'
 import Avatar from '../components/game/Avatar'
 import AccountMenu from '../components/AccountMenu'
-import { disambiguateInitials } from '../lib/gameLogic'
 import StatsModal from '../components/game/StatsModal'
-import { useState } from 'react'
+import { disambiguateInitials } from '../lib/gameLogic'
 
-const V = {
-  bg:      'var(--color-bg, #2a1620)',
-  bg2:     'var(--color-bg-2, #3a1f2c)',
-  surface: 'var(--color-surface, #3d2330)',
-  ink:     'var(--color-ink, #f6e7d3)',
-  ink2:    'var(--color-ink-2, #d8b893)',
-  muted:   'var(--color-muted, #9b7c6b)',
-  line:    'var(--color-line, #5a3445)',
-  accent:  'var(--color-accent, #e89a3c)',
-  accent2: 'var(--color-accent-2, #d24a3d)',
-  accent3: 'var(--color-accent-3, #b6c97a)',
-}
-
-function formatDate(isoString) {
-  if (!isoString) return '—'
-  return new Date(isoString).toLocaleDateString('en-IN', {
-    year: 'numeric', month: 'short', day: 'numeric',
-  })
-}
-
+// ── Helpers ───────────────────────────────────────────────────────────
 function formatDuration(startedAt, endedAt) {
   if (!startedAt || !endedAt) return null
   const ms = new Date(endedAt).getTime() - new Date(startedAt).getTime()
@@ -36,36 +17,38 @@ function formatDuration(startedAt, endedAt) {
   return h > 0 ? `${h}h ${m}m` : `${m}m`
 }
 
-// Process raw Supabase game into a shape usable by the UI.
+function timeAgo(isoString) {
+  if (!isoString) return '—'
+  const diff = Date.now() - new Date(isoString).getTime()
+  const mins  = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days  = Math.floor(diff / 86400000)
+  const weeks = Math.floor(days / 7)
+  const months= Math.floor(days / 30)
+  if (mins  < 60)   return 'Just now'
+  if (hours < 24)   return `${hours}h ago`
+  if (days  === 1)  return 'Yesterday'
+  if (days  < 7)    return `${days} days ago`
+  if (weeks === 1)  return 'Last week'
+  if (weeks < 5)    return `${weeks} weeks ago`
+  if (months === 1) return 'Last month'
+  return `${months} months ago`
+}
+
 function processGame(g) {
-  const players = [...g.game_players]
-    .sort((a, b) => a.seat_order - b.seat_order)
+  const players = [...g.game_players].sort((a, b) => a.seat_order - b.seat_order)
   const names = players.map(p => p.display_name)
   const initials = disambiguateInitials(names)
-  const normPlayers = players.map((p, i) => ({
-    ...p,
-    displayName: p.display_name,
-    initial: initials[i],
-  }))
-
+  const normPlayers = players.map((p, i) => ({ ...p, displayName: p.display_name, initial: initials[i] }))
   const playerCount = normPlayers.length
 
-  // Normalize rounds into the same shape StatsModal expects
   const normRounds = g.rounds.map(r => {
     const bids = {}
     for (const b of r.bids) bids[b.game_player_id] = b.bid
     const took = {}
     for (const rr of r.round_results) took[rr.game_player_id] = rr.tricks_won
     const isComplete = r.round_results.length === playerCount
-    return {
-      id: r.id,
-      roundNumber: r.round_number,
-      cards: r.cards_dealt,
-      trump: r.trump_suit,
-      dealerId: r.dealer_id,
-      bids,
-      took: isComplete ? took : null,
-    }
+    return { id: r.id, roundNumber: r.round_number, cards: r.cards_dealt, trump: r.trump_suit, dealerId: r.dealer_id, bids, took: isComplete ? took : null }
   })
   const completedRounds = normRounds.filter(r => r.took !== null)
 
@@ -81,299 +64,277 @@ function processGame(g) {
   const winner = g.status === 'complete' && sorted.length > 0 ? sorted[0] : null
 
   return {
-    id: g.id,
-    name: g.name,
-    scoringVariant: g.scoring_variant,
-    gameType:    g.game_type    ?? 'card',
-    gameSubtype: g.game_subtype ?? 'kachufull',
-    status: g.status,
-    startedAt: g.started_at,
-    endedAt: g.ended_at,
-    createdAt: g.created_at,
-    players: normPlayers,
-    completedRounds,
-    completedRoundCount: completedRounds.length,
-    totals,
-    sorted,
-    winner,
+    id: g.id, name: g.name, scoringVariant: g.scoring_variant,
+    gameType: g.game_type ?? 'card', gameSubtype: g.game_subtype ?? 'kachufull',
+    status: g.status, startedAt: g.started_at, endedAt: g.ended_at, createdAt: g.created_at,
+    players: normPlayers, completedRounds, completedRoundCount: completedRounds.length,
+    totals, sorted, winner,
   }
 }
 
-// Aggregate stats across all games for the current user.
-function computeStats(rawGames, userId) {
-  const empty = { totalGames: 0, winRate: 0, winsLabel: '0/0', bestRound: 0, accuracy: 0, accuracyLabel: '0/0' }
-  if (!rawGames.length) return empty
-
-  const completeGames = rawGames.filter(g => g.status === 'complete')
-  let wins = 0
-  for (const g of completeGames) {
-    const pg = processGame(g)
-    const userSeat = pg.players.find(p => p.user_id === userId)
-    if (!userSeat) continue
-    const userScore = pg.totals[userSeat.id] ?? 0
-    const maxScore = Math.max(...Object.values(pg.totals))
-    if (userScore === maxScore) wins++
-  }
-
-  let bestRound = 0
-  let madeBids = 0, totalBids = 0
-  for (const g of rawGames) {
-    const playerCount = g.game_players.length
-    const userSeat = g.game_players.find(p => p.user_id === userId)
-    for (const r of g.rounds) {
-      if (r.round_results.length !== playerCount) continue
-      if (!userSeat) continue
-      const bid = r.bids.find(b => b.game_player_id === userSeat.id)
-      const result = r.round_results.find(rr => rr.game_player_id === userSeat.id)
-      if (bid && result) {
-        totalBids++
-        if (bid.bid === result.tricks_won) madeBids++
-        if (result.score > bestRound) bestRound = result.score
-      }
-    }
-  }
-
-  const winRate = completeGames.length > 0
-    ? Math.round((wins / completeGames.length) * 100)
-    : 0
-  const accuracy = totalBids > 0
-    ? Math.round((madeBids / totalBids) * 100)
-    : 0
-
-  return {
-    totalGames: rawGames.length,
-    winRate,
-    winsLabel: `${wins}/${completeGames.length}`,
-    bestRound,
-    accuracy,
-    accuracyLabel: `${madeBids}/${totalBids}`,
-  }
-}
-
-// ── Stat card ─────────────────────────────────────────────────────────────────
-function StatCard({ label, value, sub, accent }) {
+// ── Game collection tile ──────────────────────────────────────────────
+function GameTile({ glyph, name, count, comingSoon, onClick }) {
   return (
-    <div style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 20, padding: '20px 24px' }}>
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted }}>{label}</div>
-      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 44, letterSpacing: '-0.03em', lineHeight: 1, color: accent ? V.accent : V.ink, marginTop: 8 }}>{value}</div>
-      {sub && <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.muted, marginTop: 6 }}>{sub}</div>}
-    </div>
+    <button
+      onClick={comingSoon ? undefined : onClick}
+      style={{
+        flexShrink: 0, minWidth: 130,
+        background: 'var(--color-surface)', border: '1px solid var(--color-line)',
+        borderRadius: 14, padding: '14px 16px',
+        textAlign: 'left', cursor: comingSoon ? 'default' : 'pointer',
+        opacity: comingSoon ? 0.45 : 1,
+        transition: 'border-color 0.2s',
+        touchAction: 'manipulation',
+      }}
+      onMouseEnter={e => { if (!comingSoon) e.currentTarget.style.borderColor = 'var(--color-muted)' }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-line)' }}
+    >
+      <div style={{ fontSize: 22, marginBottom: 8, lineHeight: 1 }}>{glyph}</div>
+      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'var(--color-ink)', marginBottom: 4 }}>{name}</div>
+      {comingSoon
+        ? <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--color-muted)', marginTop: 6, display: 'inline-block', background: 'var(--color-bg-2)', border: '1px solid var(--color-line)', borderRadius: 4, padding: '2px 5px' }}>Soon</div>
+        : <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-muted)' }}>Played <b style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{count}</b> times</div>
+      }
+    </button>
   )
 }
 
-// ── Game card ─────────────────────────────────────────────────────────────────
-function GameCard({ rawGame, onOpen, onStats }) {
+// ── Game card ─────────────────────────────────────────────────────────
+const MEDALS = ['🥇', '🥈', '🥉']
+
+function GameCard({ rawGame, expanded, onToggle, onNavigate, onStats }) {
   const pg = processGame(rawGame)
-  const { id, name, status, startedAt, endedAt, createdAt, players, completedRoundCount, totals, sorted, winner, gameSubtype } = pg
+  const { id, name, status, startedAt, endedAt, createdAt, players, completedRoundCount, totals, sorted, winner } = pg
   const isComplete = status === 'complete'
   const duration = formatDuration(startedAt, endedAt)
-  const displayName = name || `Game · ${formatDate(createdAt)}`
+  const displayName = name || 'Unnamed game'
+  const winnerColor = winner?.color || 'var(--color-accent)'
+
+  const metaParts = [
+    displayName,
+    `${players.length} players`,
+    duration,
+    timeAgo(endedAt || createdAt),
+  ].filter(Boolean)
 
   return (
-    <div
-      style={{
-        background: V.surface,
-        border: `1px solid ${V.line}`,
-        borderRadius: 20,
-        padding: '20px 24px',
-        cursor: 'pointer',
-        transition: 'border-color .15s ease',
-      }}
-      onClick={onOpen}
-      onMouseEnter={e => e.currentTarget.style.borderColor = isComplete ? V.accent : V.ink2}
-      onMouseLeave={e => e.currentTarget.style.borderColor = V.line}
+    <div style={{
+      background: 'var(--color-surface)',
+      border: '1px solid var(--color-line)',
+      borderRadius: 14, overflow: 'hidden',
+      transition: 'border-color 0.2s',
+    }}
+      onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--color-muted)'}
+      onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--color-line)'}
     >
-      {/* Header row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14, gap: 12 }}>
-        <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: V.ink, marginBottom: 4 }}>{displayName}</div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: V.muted }}>
-            {formatDate(createdAt)}
-            {' · '}
-            {players.length} player{players.length !== 1 ? 's' : ''}
-            {' · '}
-            {completedRoundCount} round{completedRoundCount !== 1 ? 's' : ''}
-            {duration && ` · ${duration}`}
-            {gameSubtype && <>{' · '}<span style={{ color: V.line }}>{gameSubtype === 'kachufull' ? 'Ka·Chu·Fu·L' : gameSubtype}</span></>}
-          </div>
-        </div>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 5,
-          padding: '5px 12px', borderRadius: 999, flexShrink: 0,
-          fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase',
-          background: isComplete
-            ? `color-mix(in oklab, ${V.accent} 15%, ${V.bg2})`
-            : `color-mix(in oklab, ${V.accent3} 12%, ${V.bg2})`,
-          color: isComplete ? V.accent : V.accent3,
-          border: `1px solid ${isComplete ? `color-mix(in oklab, ${V.accent} 40%, transparent)` : `color-mix(in oklab, ${V.accent3} 30%, transparent)`}`,
-        }}>
-          {isComplete ? '★ Complete' : '● In progress'}
-        </div>
-      </div>
+      {/* Main row */}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        onClick={onToggle}
+        onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onToggle()}
+        style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', cursor: 'pointer' }}
+      >
+        {/* Winner color bar */}
+        <div style={{ width: 3, height: 44, borderRadius: 2, background: winnerColor, flexShrink: 0 }} />
 
-      {/* Player scores */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-        {sorted.map((p, i) => {
-          const medals = ['🥇', '🥈', '🥉']
-          const isWinner = isComplete && i === 0
-          return (
-            <div
-              key={p.id}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                background: isWinner ? `color-mix(in oklab, ${V.accent} 12%, ${V.bg2})` : V.bg2,
-                border: `1px solid ${isWinner ? `color-mix(in oklab, ${V.accent} 50%, transparent)` : V.line}`,
-                borderRadius: 10, padding: '7px 12px',
-              }}
-            >
-              {isComplete && i < 3 && <span style={{ fontSize: 14 }}>{medals[i]}</span>}
-              <Avatar player={p} size={24} />
-              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13, color: isWinner ? V.accent : V.ink }}>{p.displayName}</span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 13, color: isWinner ? V.accent : V.ink2 }}>{totals[p.id]}</span>
+        {/* Winner avatar */}
+        {isComplete && winner
+          ? <div style={{ flexShrink: 0 }}><Avatar player={winner} size={40} /></div>
+          : <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--color-bg-2)', border: '1px solid var(--color-line)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14 }}>●</span>
             </div>
-          )
-        })}
+        }
+
+        {/* Info */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 3 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, letterSpacing: '-0.02em', color: 'var(--color-ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {isComplete && winner ? winner.displayName : 'In progress'}
+            </div>
+            {isComplete && winner && (
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--color-muted)', flexShrink: 0 }}>
+                {totals[winner.id]} pts
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '3px 6px' }}>
+            {metaParts.map((part, i) => (
+              <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {i > 0 && <span style={{ color: 'var(--color-line)', fontSize: 10 }}>·</span>}
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-muted)', letterSpacing: '.04em' }}>{part}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Expand arrow */}
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 18, color: 'var(--color-muted)', flexShrink: 0, transition: 'transform 0.2s', transform: expanded ? 'rotate(90deg)' : 'none' }}>›</div>
       </div>
 
-      {/* Footer */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTop: `1px solid ${V.line}` }}>
-        {isComplete && winner ? (
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.muted }}>
-            <b style={{ color: V.accent }}>{winner.displayName}</b> won with <b style={{ color: V.ink }}>{totals[winner.id]}</b> points
-            {sorted.length > 1 && <> · <b style={{ color: V.ink }}>+{totals[winner.id] - totals[sorted[1].id]}</b> ahead</>}
-          </div>
-        ) : (
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.muted }}>
-            Round {completedRoundCount + 1} in progress
-          </div>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {completedRoundCount > 0 && (
+      {/* Expanded standings */}
+      {expanded && (
+        <div style={{ borderTop: '1px solid var(--color-line)', padding: '12px 16px', background: `color-mix(in oklab, var(--color-bg) 40%, var(--color-surface))` }}>
+          {sorted.map((p, i) => (
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: i < sorted.length - 1 ? '1px solid color-mix(in oklab, var(--color-line) 50%, transparent)' : 'none' }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-muted)', width: 20, textAlign: 'center', flexShrink: 0 }}>
+                {isComplete && i < 3 ? MEDALS[i] : `${i + 1}`}
+              </span>
+              <div style={{ width: 10, height: 10, borderRadius: '50%', background: p.color, flexShrink: 0 }} />
+              <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-ink-2)', flex: 1 }}>{p.displayName}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 13, color: 'var(--color-ink)' }}>{totals[p.id]}</span>
+            </div>
+          ))}
+
+          {/* Footer actions */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+            <div>
+              {completedRoundCount > 0 && (
+                <button
+                  onClick={e => { e.stopPropagation(); onStats(pg) }}
+                  style={{ background: 'none', border: '1px solid var(--color-line)', borderRadius: 8, padding: '6px 12px', fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--color-ink-2)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5, touchAction: 'manipulation' }}
+                >
+                  <span>⊞</span> Stats
+                </button>
+              )}
+            </div>
             <button
-              onClick={e => { e.stopPropagation(); onStats(pg) }}
-              style={{ background: 'transparent', border: `1px solid ${V.line}`, borderRadius: 10, padding: '6px 12px', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', color: V.ink2, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+              onClick={e => { e.stopPropagation(); onNavigate() }}
+              style={{ background: 'none', border: '1px solid var(--color-line)', borderRadius: 8, padding: '6px 12px', fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--color-accent)', cursor: 'pointer', touchAction: 'manipulation' }}
             >
-              <span style={{ fontSize: 11 }}>⊞</span> Stats
+              {isComplete ? 'Full results →' : 'Continue →'}
             </button>
-          )}
-          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, color: isComplete ? V.accent : V.ink2, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            {isComplete ? 'View final results' : 'Continue game'} →
-          </span>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+// ── Page ──────────────────────────────────────────────────────────────
 export default function History() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const { games, loading, error, reload } = useHistory()
   const [statsGame, setStatsGame] = useState(null)
+  const [expandedIds, setExpandedIds] = useState(new Set())
 
-  const stats = computeStats(games, user?.id)
-
-  function openGame(g) {
-    if (g.status === 'complete') {
-      navigate(`/game/${g.id}/final`)
-    } else {
-      navigate(`/game/${g.id}`)
-    }
+  function toggleCard(id) {
+    setExpandedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
   }
 
-  return (
-    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 32px 48px', minHeight: '100vh' }}>
+  function openGame(g) {
+    navigate(g.status === 'complete' ? `/game/${g.id}/final` : `/game/${g.id}`)
+  }
 
-      {/* ─── Header ─── */}
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, paddingBottom: 16, borderBottom: `1px solid ${V.line}` }}>
-        <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, letterSpacing: '-0.01em', color: V.ink }}>
-            Ujagro
-          </div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, marginTop: 4 }}>Game History</div>
+  const kachufulCount = games.filter(g => (g.game_subtype ?? 'kachufull') === 'kachufull').length
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--color-bg)', position: 'relative' }}>
+
+      {/* Subtle lattice background */}
+      <div aria-hidden="true" style={{ position: 'fixed', inset: 0, backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 18px, color-mix(in oklab, var(--color-accent) 2%, transparent) 18px, color-mix(in oklab, var(--color-accent) 2%, transparent) 19px), repeating-linear-gradient(-45deg, transparent, transparent 18px, color-mix(in oklab, var(--color-accent) 2%, transparent) 18px, color-mix(in oklab, var(--color-accent) 2%, transparent) 19px)', pointerEvents: 'none', zIndex: 0 }} />
+
+      {/* Sticky header */}
+      <header style={{ position: 'sticky', top: 0, zIndex: 20, background: 'var(--color-bg)', borderBottom: '1px solid var(--color-line)', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, letterSpacing: '-0.03em', color: 'var(--color-ink)' }}>
+            Uja<span style={{ color: 'var(--color-accent)' }}>gro</span>
+          </span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--color-muted)', marginLeft: 8 }}>· History</span>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <button
-            onClick={() => navigate('/')}
-            style={{ background: V.accent, border: 'none', borderRadius: 12, padding: '10px 18px', fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, color: '#2a1620', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-          >
-            + New game
-          </button>
-          <AccountMenu />
-        </div>
+        <AccountMenu />
       </header>
 
-      {/* ─── Loading ─── */}
-      {loading && (
-        <div style={{ textAlign: 'center', padding: '60px 0' }}>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted }}>Loading history…</div>
-        </div>
-      )}
+      {/* Page body */}
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 640, margin: '0 auto', padding: '0 20px 80px' }}>
 
-      {/* ─── Error ─── */}
-      {error && !loading && (
-        <div style={{ textAlign: 'center', padding: '60px 0' }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 18, color: V.ink, marginBottom: 8 }}>Failed to load</div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: V.muted, marginBottom: 16 }}>{error}</div>
-          <button onClick={reload} style={{ background: 'transparent', border: 'none', color: V.accent, fontFamily: 'var(--font-body)', fontSize: 14, cursor: 'pointer', textDecoration: 'underline' }}>Try again</button>
-        </div>
-      )}
+        {/* ── New Game hero ── */}
+        <div style={{ padding: '28px 0 24px', animation: 'rise 0.6s cubic-bezier(0.22,1,0.36,1) 0.05s both' }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--color-muted)', marginBottom: 10 }}>Game night</div>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(26px, 7vw, 36px)', letterSpacing: '-0.03em', color: 'var(--color-ink)', marginBottom: 18, lineHeight: 1.1, textWrap: 'balance' }}>
+            Ready for another <span style={{ color: 'var(--color-accent)' }}>round?</span>
+          </h1>
 
-      {/* ─── Stats row ─── */}
-      {!loading && !error && games.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 32 }}>
-          <StatCard
-            label="Games played"
-            value={stats.totalGames}
-            sub={`${games.filter(g => g.status === 'complete').length} complete`}
-          />
-          <StatCard
-            label="Win rate"
-            value={`${stats.winRate}%`}
-            sub={`${stats.winsLabel} games`}
-            accent
-          />
-          <StatCard
-            label="Best round score"
-            value={stats.bestRound || '—'}
-            sub={stats.bestRound ? 'points in one round' : 'no data yet'}
-          />
-          <StatCard
-            label="Accuracy"
-            value={stats.accuracyLabel === '0/0' ? '—' : `${stats.accuracy}%`}
-            sub={stats.accuracyLabel === '0/0' ? 'no data yet' : `${stats.accuracyLabel} bids made`}
-          />
-        </div>
-      )}
-
-      {/* ─── Game list ─── */}
-      {!loading && !error && games.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '80px 0' }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 28, color: V.ink, marginBottom: 10 }}>No games yet</div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: V.muted, marginBottom: 24 }}>Start your first game to see it here.</div>
           <button
             onClick={() => navigate('/')}
-            style={{ background: V.accent, border: 'none', borderRadius: 12, padding: '14px 24px', fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15, color: '#2a1620', cursor: 'pointer' }}
+            style={{ width: '100%', position: 'relative', overflow: 'hidden', background: 'var(--color-accent)', border: 'none', borderRadius: 16, padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', touchAction: 'manipulation', transition: 'opacity 0.2s, transform 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = '0.92'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'none' }}
+            onMouseDown={e => e.currentTarget.style.transform = 'scale(0.99)'}
+            onMouseUp={e => e.currentTarget.style.transform = 'translateY(-1px)'}
           >
-            + New game
+            {/* Lattice on button */}
+            <div aria-hidden="true" style={{ position: 'absolute', inset: 0, backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 14px, rgba(255,255,255,0.05) 14px, rgba(255,255,255,0.05) 15px), repeating-linear-gradient(-45deg, transparent, transparent 14px, rgba(255,255,255,0.05) 14px, rgba(255,255,255,0.05) 15px)', pointerEvents: 'none' }} />
+            <div style={{ position: 'relative' }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, letterSpacing: '-0.02em', color: 'var(--color-bg)' }}>New Game</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.06em', color: `color-mix(in oklab, var(--color-bg) 60%, transparent)`, marginTop: 2 }}>Set up players · pick a game · deal</div>
+            </div>
+            <div style={{ position: 'relative', fontSize: 28, color: 'var(--color-bg)', opacity: 0.7, lineHeight: 1 }}>→</div>
           </button>
         </div>
-      )}
 
-      {!loading && !error && games.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {games.map(g => (
-            <GameCard
-              key={g.id}
-              rawGame={g}
-              onOpen={() => openGame(g)}
-              onStats={pg => setStatsGame(pg)}
-            />
-          ))}
+        {/* ── Game collection ── */}
+        <div style={{ animation: 'rise 0.6s ease 0.12s both', marginBottom: 32 }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--color-muted)', marginBottom: 12 }}>Your games</div>
+          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 4 }}>
+            <GameTile glyph="♠♦♣♥" name="Ka·Chu·Fu·L" count={kachufulCount} onClick={() => navigate('/')} />
+            <GameTile glyph="♠3" name="3 of Spades" comingSoon />
+            <GameTile glyph="⬡" name="Board Games" comingSoon />
+          </div>
         </div>
-      )}
 
+        {/* ── Loading ── */}
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '60px 0' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--color-muted)' }}>Loading…</div>
+          </div>
+        )}
+
+        {/* ── Error ── */}
+        {error && !loading && (
+          <div style={{ textAlign: 'center', padding: '48px 0' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 18, color: 'var(--color-ink)', marginBottom: 8 }}>Failed to load</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--color-muted)', marginBottom: 16 }}>{error}</div>
+            <button onClick={reload} style={{ background: 'none', border: 'none', color: 'var(--color-accent)', fontFamily: 'var(--font-body)', fontSize: 14, cursor: 'pointer', textDecoration: 'underline' }}>Try again</button>
+          </div>
+        )}
+
+        {/* ── Empty state ── */}
+        {!loading && !error && games.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '48px 24px', border: '1px dashed var(--color-line)', borderRadius: 16, animation: 'rise 0.6s ease 0.2s both' }}>
+            <div style={{ fontSize: 32, marginBottom: 12, opacity: 0.4 }}>♠</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 16, color: 'var(--color-ink-2)', marginBottom: 6 }}>No games yet</div>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-muted)' }}>Your first game will appear here.</div>
+          </div>
+        )}
+
+        {/* ── Game list ── */}
+        {!loading && !error && games.length > 0 && (
+          <div style={{ animation: 'rise 0.6s ease 0.2s both' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--color-muted)', marginBottom: 12 }}>Recent game nights</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {games.map(g => (
+                <GameCard
+                  key={g.id}
+                  rawGame={g}
+                  expanded={expandedIds.has(g.id)}
+                  onToggle={() => toggleCard(g.id)}
+                  onNavigate={() => openGame(processGame(g))}
+                  onStats={pg => setStatsGame(pg)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Stats modal */}
       {statsGame && (
         <StatsModal
           open
@@ -383,6 +344,7 @@ export default function History() {
           completedRounds={statsGame.completedRounds}
         />
       )}
+
     </div>
   )
 }
