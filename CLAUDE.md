@@ -366,6 +366,22 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
     - `font-variant-numeric: tabular-nums` on all score/count numbers
     - `translate="no"` on brand and game names
 
+- **Session 19** — PlayingScreen redesign + audit fixes:
+  - `PlayingScreen.jsx` full redesign (discussion-first, matching BidEntry's design language):
+    - **Layout**: `.game-content` two-column grid — locked bids left, running tab as sticky right sidebar at ≥1100px; stacks below at <1100px. Stats row (3 cards) spans full width below `.game-content`. Footer 2-column (hint left, Enter Results right).
+    - **Header**: icon-only `game-icon-btn` buttons (◍ Game Summary, ⊞ Stats, ☕/▶ Pause) — no leaderboard chips. Pause button turns red-tinted when active.
+    - **Hero trump card**: suit-tint treatment from `trumpTint()` — no gradient. Red suits → accent2 tint, black suits → accent tint, NT → dashed border.
+    - **Hero cards card**: replaced misleading "Bid sum was X · someone was off" with "X of N tricks called".
+    - **Locked bids**: removed "BID TRICKS" label; zero-bid number is `V.ink` (not lime).
+    - **Dealer's burden card**: removed Recent/Career toggle; always shows recent 3 rounds.
+    - **Pause overlay**: extracted as `PauseOverlay` component with `role="dialog"`, `aria-modal`, `aria-label`, Escape key handler, and auto-focus on Resume button when opened.
+  - `src/lib/gameColors.js` — new shared module; `trumpTint()` extracted from BidEntry + PlayingScreen into one place.
+  - `BidEntry.jsx`: removed local `trumpTint`, imports from `gameColors`.
+  - **Composition**: extracted `StreakCard`, `BiggestBidCard`, `DealerBurdenCard`, `PauseOverlay` as module-level components in PlayingScreen.
+  - **Performance**: all derived values memoized (`totals`, `ranks`, `sorted`, `topStreak`, `biggest`, `recent3`, `tabRounds`); interval only ticks when `paused`; `togglePause` + `handleEndGame` wrapped in `useCallback`.
+  - **Accessibility**: `scope="col"` on `<th>`; "Bids locked in" heading → `<h2>`; `aria-label` on sections; `aria-expanded` on expand button; `aria-hidden` on decorative symbols; focus-visible rings on all buttons.
+  - **CSS** (`index.css`): `.game-cta-btn` + `.game-expand-btn` focus-visible rings; `@media (prefers-reduced-motion: reduce)` guard suppressing all game transitions/animations.
+
 - **Session 18** — Free Form Entry setup + BidEntry redesign:
   - `supabase/add_freeform_game.sql` migration: adds `games.team_mode` (text, check `none|alternating|custom`) and `game_players.team` (smallint, check 1|2). Applied to production.
   - `Home.jsx`: added `freeform` as available card game; `teamMode` state (`none`/`alternating`/`custom`); Team Mode config card (radio-style three-way toggle) shown only when freeform selected; seat cards show A/B badges (alternating = static, custom = tappable toggle); Dealer section and Advanced Settings hidden for freeform; `canStart` updated (freeform doesn't require dealer); game INSERT writes `team_mode`; game_players INSERT writes `team` per seat.
@@ -424,8 +440,9 @@ Design intent captured before the `/frontend-design` pass on `BidEntry`, `Playin
 
 - **BidEntry chip strip — done players**: players who have already bid should remain clearly readable (name + bid number visible), not strongly faded. The chip can de-emphasise slightly to let the active player stand out, but the bid value must stay legible — the table is watching and cross-checking each other's calls.
 - **Running tab layout**: breakpoint is **1100px viewport width**. Above 1100px: running tab is a sticky right sidebar (~380px fixed), spotlight/entry takes the remaining left column, hero cards and footer span full width. Below 1100px: running tab stacks below the spotlight as today. Round column is `position: sticky; left: 0` (opaque bg) so it stays anchored when the table scrolls horizontally for many players. No JS needed — pure CSS grid + media query. Applies to BidEntry, PlayingScreen, and ResultsEntry.
-- **Execution order**: (1) Composition — extract `GameHeader`, `HeroCards`, `RunningTab`, shared `gameColors.js`; (2) `/frontend-design` redesign per component with discussion before coding; (3) quality passes (`/react-best-practices`, `/web-design-guidelines`, `/composition-patterns`).
+- **Execution order**: (1) Composition — extract `GameHeader`, `HeroCards`, `RunningTab`, shared `gameColors.js`; (2) discussion-first redesign per component; (3) quality passes (`/react-best-practices`, `/web-design-guidelines`, `/composition-patterns`).
 - **Do not touch**: `GameOverSplash` (already the best screen), running tab data structure, footer CTA button positioning/sizing.
+- **Progress**: BidEntry ✓ done Session 18. PlayingScreen ✓ done Session 19. ResultsEntry — next.
 - **Pending deep dives** (cover during game flow walkthrough): StatsModal (5-section stat breakdown), SummaryModal / Game Summary page — both need a `/frontend-design` pass and purpose discussion similar to BidEntry.
 
 ### Preview / Verification Limitation
