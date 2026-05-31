@@ -84,8 +84,7 @@ function processGame(g) {
     id: g.id,
     name: g.name,
     scoringVariant: g.scoring_variant,
-    gameType:    g.game_type    ?? 'card',
-    gameSubtype: g.game_subtype ?? 'kachufull',
+
     status: g.status,
     startedAt: g.started_at,
     endedAt: g.ended_at,
@@ -194,8 +193,7 @@ function GameCard({ rawGame, onOpen, onStats }) {
             {' · '}
             {completedRoundCount} round{completedRoundCount !== 1 ? 's' : ''}
             {duration && ` · ${duration}`}
-            {' · '}
-            <span style={{ color: V.line }}>{gameSubtype === 'kachufull' ? 'Ka·Chu·Fu·L' : gameSubtype}</span>
+            {gameSubtype && <>{' · '}<span style={{ color: V.line }}>{gameSubtype === 'kachufull' ? 'Ka·Chu·Fu·L' : gameSubtype}</span></>}
           </div>
         </div>
         <div style={{
