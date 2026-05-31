@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useGame } from '../hooks/useGame'
 import Avatar from '../components/game/Avatar'
 import StatsModal from '../components/game/StatsModal'
@@ -447,6 +447,14 @@ export default function FinalResults() {
       {/* ─── Top bar ─── */}
       <header style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 20, paddingBottom: 14, borderBottom: `1px solid ${V.line}` }}>
         <div>
+          <Link
+            to="/history"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase', color: V.muted, textDecoration: 'none', marginBottom: 6, transition: 'color 0.15s' }}
+            onMouseEnter={e => e.currentTarget.style.color = V.ink2}
+            onMouseLeave={e => e.currentTarget.style.color = V.muted}
+          >
+            ← History
+          </Link>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, letterSpacing: '-0.01em', color: V.ink }}>
             Ka<span style={{ display: 'inline-block', width: '.22em', height: '.22em', background: V.accent, borderRadius: '50%', margin: '0 .03em .15em', verticalAlign: 'middle' }} />Chu<span style={{ display: 'inline-block', width: '.22em', height: '.22em', background: V.accent, borderRadius: '50%', margin: '0 .03em .15em', verticalAlign: 'middle' }} />Fu<span style={{ display: 'inline-block', width: '.22em', height: '.22em', background: V.accent, borderRadius: '50%', margin: '0 .03em .15em', verticalAlign: 'middle' }} />L
           </div>
