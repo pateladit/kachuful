@@ -471,3 +471,20 @@
 
 /* Seat team toggle badge (custom mode) */
 .setup-seat-team-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* CTA buttons (Enter Results, Resume Round) */
+.game-cta-btn { touch-action: manipulation; }
+.game-cta-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+
+/* Expand/collapse toggle in running tab */
+.game-expand-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* Honour prefers-reduced-motion across all game animations */
+@media (prefers-reduced-motion: reduce) {
+  .game-progress-bar,
+  .game-tab-sidebar *,
+  .game-content * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

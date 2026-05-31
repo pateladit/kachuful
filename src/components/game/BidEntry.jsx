@@ -5,6 +5,7 @@ import SummaryModal from './SummaryModal'
 import StatsModal from './StatsModal'
 import AccountMenu from '../AccountMenu'
 import { TRUMPS, computeTotals, computeRanks, scoreFor } from '../../lib/gameLogic'
+import { trumpTint } from '../../lib/gameColors'
 
 const V = {
   bg:      'var(--color-bg, #2a1620)',
@@ -32,23 +33,6 @@ function rankBg(rank, n) {
   return `color-mix(in oklab, ${base} 40%, transparent)`
 }
 
-function trumpTint(trump) {
-  if (!trump || trump.nt) return {
-    bg: V.bg2,
-    border: `1px dashed color-mix(in oklab, ${V.accent} 60%, transparent)`,
-    glyphColor: V.accent,
-  }
-  if (trump.red) return {
-    bg: 'color-mix(in oklab, var(--color-accent-2) 10%, var(--color-surface))',
-    border: '1px solid color-mix(in oklab, var(--color-accent-2) 28%, transparent)',
-    glyphColor: 'var(--color-red-suit, #e57860)',
-  }
-  return {
-    bg: 'color-mix(in oklab, var(--color-accent) 8%, var(--color-surface))',
-    border: '1px solid color-mix(in oklab, var(--color-accent) 24%, transparent)',
-    glyphColor: 'var(--color-ink)',
-  }
-}
 
 export default function BidEntry({
   game, players, completedRounds, pendingRound,
