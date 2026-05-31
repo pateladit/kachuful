@@ -394,3 +394,6 @@ Routines use the **Supabase MCP** connector (credentials stored securely by Anth
 - **Multi-device sessions** — each player connects on their own phone to view status and submit bids; major architecture pivot, very future
 - **3 of Spades rules** — scoring, round structure, and game loop to be defined and implemented
 - **Board game support** — free-form entry scoring model; specific games TBD
+- **Emoji retention across games** — add `emoji` column to `game_players` so the SeatEditor can pre-fill the emoji a player used last time, alongside the existing colour pre-fill
+- **Full recurring-player schema** (`saved_players` table) — host can explicitly pin frequent players; schema: `id, user_id, display_name, color, emoji, games_together_count, last_played_at`; upsert after each game; RLS on `user_id`; replaces the lightweight frequency query in `useFrequentPlayers`. Unlocks: pin/unpin UI, richer suggestion ordering, survives game data pruning
+- **Player identity across games** — currently only the host's seat is linked to a Supabase profile (`user_id`); non-host players are anonymous name strings with no cross-game correlation. Long-term: allow non-host players to have accounts so their stats accumulate regardless of who hosts

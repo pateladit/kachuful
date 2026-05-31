@@ -4,10 +4,10 @@ import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { PLAYER_COLORS, defaultLoopRounds } from '../lib/gameLogic'
 import AccountMenu from '../components/AccountMenu'
+import { useFrequentPlayers } from '../hooks/useFrequentPlayers'
 
 // ── Constants ─────────────────────────────────────────────────────────
 const EMOJIS = ['🦁','🐯','🦊','🐺','🐼','🦄','🐲','🦅','🐬','🦋','👑','⭐','🎭','🎲','🃏','♟️','🎯','🔥','⚡','🌙','💫','🎸','🚀','🍀']
-const NAME_SUGGESTIONS = ['Adit','Rahul','Priya','Meera','Dev','Zara','Kiran','Rohan','Nisha','Arjun','Pooja','Vikram','Ananya','Sanjay','Kavya']
 
 const COLOR_NAMES = {
   '#e89a3c': 'amber',   '#d24a3d': 'crimson',
@@ -53,33 +53,37 @@ const SeatAvatar = memo(function SeatAvatar({ player, size = 36 }) {
 })
 
 // ── Seat editor popover ───────────────────────────────────────────────
-const SeatEditor = memo(function SeatEditor({ player, usedNames, onNameChange, onColorChange, onEmojiChange, onClose }) {
+const SeatEditor = memo(function SeatEditor({ player, usedNames, frequentPlayers, onNameChange, onColorChange, onEmojiChange, onClose }) {
   const inputRef = useRef(null)
   const [pickerTab, setPickerTab] = useState(player.emoji ? 'emojis' : 'colors')
   const [query, setQuery] = useState(player.displayName)
 
   useEffect(() => { inputRef.current?.focus() }, [])
 
-  const suggestions = query.length >= 1
-    ? NAME_SUGGESTIONS.filter(n =>
-        n.toLowerCase().startsWith(query.toLowerCase()) &&
-        !usedNames.includes(n.toLowerCase())
-      ).slice(0, 4)
-    : []
+  // Filter frequent players by query prefix, exclude already-used names
+  const suggestions = useMemo(() => {
+    const q = query.toLowerCase()
+    return frequentPlayers.filter(fp =>
+      (q === '' || fp.displayName.toLowerCase().startsWith(q)) &&
+      !usedNames.includes(fp.displayName.toLowerCase())
+    ).slice(0, 5)
+  }, [query, frequentPlayers, usedNames])
 
   function handleInput(val) {
     setQuery(val)
     onNameChange(val)
   }
 
-  function applySuggestion(name) {
-    setQuery(name)
-    onNameChange(name)
+  function applySuggestion({ displayName, color }) {
+    setQuery(displayName)
+    onNameChange(displayName)
+    onColorChange(color)
+    onEmojiChange(null)
     inputRef.current?.focus()
   }
 
   function handleKeyDown(e) {
-    if ((e.key === 'Tab') && suggestions.length) {
+    if (e.key === 'Tab' && suggestions.length) {
       e.preventDefault()
       applySuggestion(suggestions[0])
     } else if (e.key === 'Enter' || e.key === 'Escape') {
@@ -106,17 +110,19 @@ const SeatEditor = memo(function SeatEditor({ player, usedNames, onNameChange, o
           className="setup-name-input"
           style={{ width: '100%', background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: 10, padding: '9px 12px', fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--color-ink)' }}
         />
-        {/* Autocomplete suggestions */}
+        {/* Frequent player suggestions */}
         {suggestions.length > 0 ? (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 6 }}>
-            {suggestions.map(s => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
+            {suggestions.map(fp => (
               <button
-                key={s}
+                key={fp.displayName}
                 className="setup-suggestion-btn"
-                onMouseDown={e => { e.preventDefault(); applySuggestion(s) }}
-                style={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: 999, padding: '3px 10px', fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-ink-2)', cursor: 'pointer' }}
+                onMouseDown={e => { e.preventDefault(); applySuggestion(fp) }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: 8, padding: '6px 10px', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-ink-2)', cursor: 'pointer', textAlign: 'left', width: '100%' }}
               >
-                {s}
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: fp.color, flexShrink: 0 }} aria-hidden="true" />
+                <span style={{ flex: 1 }}>{fp.displayName}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-muted)', letterSpacing: '.04em', flexShrink: 0 }}>×{fp.count}</span>
               </button>
             ))}
           </div>
@@ -337,6 +343,7 @@ export default function Home() {
     [players]
   )
   const dealer = dealerSeat !== null ? players[dealerSeat] : null
+  const frequentPlayers = useFrequentPlayers(user?.id)
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)', position: 'relative' }}>
@@ -414,6 +421,7 @@ export default function Home() {
                   <SeatEditor
                     player={player}
                     usedNames={usedNames.filter(n => n !== player.displayName.toLowerCase())}
+                    frequentPlayers={frequentPlayers}
                     onNameChange={val => updatePlayer(player.id, 'displayName', val)}
                     onColorChange={val => updatePlayer(player.id, 'color', val)}
                     onEmojiChange={val => updatePlayer(player.id, 'emoji', val)}
