@@ -358,6 +358,13 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
     - `font-variant-numeric: tabular-nums` on all score/count numbers
     - `translate="no"` on brand and game names
 
+- **Session 17** — Composition patterns polish + frequent-player suggestions:
+  - **Login.jsx** (`patterns-explicit-variants`): extracted `SignInPanel`, `SignUpPanel`, `GuestPanel` as explicit variant components — render method reduced to 3 clean ternary lines; each panel is self-documenting and independently readable
+  - **History.jsx** (`architecture-avoid-boolean-props`): split `GameTile` boolean-prop component into `AvailableGameTile` (interactive `<button>`, count, hover) and `ComingSoonGameTile` (inert `<div>`, "Soon" badge); shared `tileBaseStyle` constant
+  - **Frequent-player suggestions** (`useFrequentPlayers` hook + `SeatEditor`):
+    - `src/hooks/useFrequentPlayers.js`: queries `game_players` for non-host seats from the current user's games; aggregates by `display_name` with play count; pre-fills colour from most recent appearance; returns top 8 by frequency; cleans up on unmount
+    - `SeatEditor`: displays frequent players as list rows (colour dot · name · ×N count); empty input shows all ranked by frequency, typing filters by prefix; Tab or click applies name + pre-fills colour; replaces hardcoded `NAME_SUGGESTIONS` array
+
 - **Session 16** — Setup page react-best-practices + web-design-guidelines audit + fixes:
   - **CSS** (`index.css`): 18 new `.setup-*` classes — `:hover` transitions, `:focus-visible` rings (2px amber outline), `touch-action: manipulation` on all interactive elements; removes all JS `onMouseEnter/Leave` style mutations from the page
   - **Semantic HTML**: page body `<div>` → `<main>`; seats strip + config cards wrapped in `<section aria-label="…">`
