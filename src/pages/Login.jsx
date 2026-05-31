@@ -135,10 +135,11 @@ export default function Login() {
                   type="text"
                   required
                   autoComplete="username"
+                  name="username"
                   value={username}
                   onChange={e => setUsername(e.target.value)}
                   className="w-full rounded-lg bg-bg border border-line px-3 py-2.5 text-sm
-                             text-ink focus:outline-none focus:border-accent transition-colors"
+                             text-ink focus:outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/50 transition-colors"
                 />
               </div>
             )}
@@ -149,10 +150,12 @@ export default function Login() {
                 type="email"
                 required
                 autoComplete="email"
+                name="email"
+                spellCheck={false}
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 className="w-full rounded-lg bg-bg border border-line px-3 py-2.5 text-sm
-                           text-ink focus:outline-none focus:border-accent transition-colors"
+                           text-ink focus:outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/50 transition-colors"
               />
             </div>
 
@@ -162,10 +165,11 @@ export default function Login() {
                 type="password"
                 required
                 autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                name="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 className="w-full rounded-lg bg-bg border border-line px-3 py-2.5 text-sm
-                           text-ink focus:outline-none focus:border-accent transition-colors"
+                           text-ink focus:outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/50 transition-colors"
               />
             </div>
 
@@ -207,11 +211,13 @@ export default function Login() {
               <label className="block text-xs font-medium text-ink-2 mb-1.5">Your name</label>
               <input
                 type="text"
-                placeholder="Enter your name to play as guest"
+                placeholder="Enter your name to play as guest…"
+                autoComplete="name"
+                name="guest-name"
                 value={guestName}
                 onChange={e => setGuestName(e.target.value)}
                 className="w-full rounded-lg bg-bg border border-line px-3 py-2.5 text-sm
-                           text-ink focus:outline-none focus:border-accent transition-colors"
+                           text-ink focus:outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/50 transition-colors"
               />
             </div>
             <button

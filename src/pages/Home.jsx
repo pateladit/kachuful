@@ -242,37 +242,45 @@ export default function Home() {
                       {/* Color swatch */}
                       <button
                         type="button"
+                        aria-label={`Pick colour for ${player.displayName || `Player ${i + 1}`}`}
+                        aria-expanded={colorPickerOpen === player.id}
                         onClick={() => setColorPickerOpen(colorPickerOpen === player.id ? null : player.id)}
                         className="w-7 h-7 rounded-full flex-shrink-0 ring-2 ring-transparent
-                                   hover:ring-ink transition-all"
+                                   hover:ring-ink focus-visible:ring-accent transition-all"
                         style={{ backgroundColor: player.color }}
                       />
 
                       {/* Name input */}
                       <input
                         type="text"
-                        placeholder={`Player ${i + 1}`}
+                        placeholder={`Player ${i + 1}…`}
+                        autoComplete="off"
+                        name={`player-${i}`}
                         value={player.displayName}
                         onChange={e => updatePlayer(player.id, 'displayName', e.target.value)}
                         className="flex-1 bg-transparent text-sm text-ink focus:outline-none
-                                   placeholder:text-muted"
+                                   placeholder:text-muted focus-visible:outline-none"
                       />
 
                       {/* Reorder */}
                       <div className="flex gap-0.5">
                         <button
+                          aria-label={`Move ${player.displayName || `Player ${i + 1}`} up`}
                           onClick={() => moveUp(i)}
                           disabled={i === 0}
                           className="w-6 h-6 flex items-center justify-center text-muted
-                                     hover:text-ink disabled:opacity-20 transition-colors text-xs"
+                                     hover:text-ink disabled:opacity-20 transition-colors text-xs
+                                     focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent rounded"
                         >
                           ↑
                         </button>
                         <button
+                          aria-label={`Move ${player.displayName || `Player ${i + 1}`} down`}
                           onClick={() => moveDown(i)}
                           disabled={i === players.length - 1}
                           className="w-6 h-6 flex items-center justify-center text-muted
-                                     hover:text-ink disabled:opacity-20 transition-colors text-xs"
+                                     hover:text-ink disabled:opacity-20 transition-colors text-xs
+                                     focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent rounded"
                         >
                           ↓
                         </button>
@@ -280,10 +288,12 @@ export default function Home() {
 
                       {/* Remove */}
                       <button
+                        aria-label={`Remove ${player.displayName || `Player ${i + 1}`}`}
                         onClick={() => removePlayer(player.id)}
                         disabled={players.length <= 2}
                         className="w-6 h-6 flex items-center justify-center text-muted
-                                   hover:text-accent-2 disabled:opacity-20 transition-colors"
+                                   hover:text-accent-2 disabled:opacity-20 transition-colors
+                                   focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent rounded"
                       >
                         ×
                       </button>
@@ -295,11 +305,14 @@ export default function Home() {
                         {PLAYER_COLORS.map(color => (
                           <button
                             key={color}
+                            aria-label={`Set colour to ${color}`}
+                            aria-pressed={player.color === color}
                             onClick={() => {
                               updatePlayer(player.id, 'color', color)
                               setColorPickerOpen(null)
                             }}
-                            className="w-8 h-8 rounded-full border-2 transition-transform hover:scale-110"
+                            className="w-8 h-8 rounded-full border-2 transition-transform hover:scale-110
+                                       focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
                             style={{
                               backgroundColor: color,
                               borderColor: player.color === color ? '#f6e7d3' : 'transparent',
@@ -320,16 +333,19 @@ export default function Home() {
 
             {/* ── Game name ── */}
             <section>
-              <label className="block text-sm font-medium text-ink-2 mb-2">
+              <label htmlFor="game-name" className="block text-sm font-medium text-ink-2 mb-2">
                 Game name <span className="text-muted font-normal">(optional)</span>
               </label>
               <input
+                id="game-name"
                 type="text"
-                placeholder="e.g. Diwali Eve 2026"
+                placeholder="e.g. Diwali Eve 2026…"
+                autoComplete="off"
+                name="game-name"
                 value={gameName}
                 onChange={e => setGameName(e.target.value)}
                 className="w-full rounded-xl bg-surface border border-line px-4 py-3 text-sm
-                           text-ink focus:outline-none focus:border-accent transition-colors"
+                           text-ink focus:outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/50 transition-colors"
               />
             </section>
 
@@ -345,11 +361,12 @@ export default function Home() {
                 ].map(cat => (
                   <button
                     key={cat.id}
+                    aria-pressed={gameCategory === cat.id}
                     onClick={() => {
                       setGameCategory(cat.id)
                       setGameSubtype(null)
                     }}
-                    className={`flex flex-col items-center gap-1 rounded-xl border px-4 py-4 text-center transition-colors ${
+                    className={`flex flex-col items-center gap-1 rounded-xl border px-4 py-4 text-center transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${
                       gameCategory === cat.id
                         ? 'border-accent bg-surface'
                         : 'border-line bg-surface hover:border-muted'
@@ -381,8 +398,10 @@ export default function Home() {
                   ].map(g => (
                     <button
                       key={g.id}
+                      role="radio"
+                      aria-checked={gameSubtype === g.id}
                       onClick={() => setGameSubtype(g.id)}
-                      className={`w-full flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${
+                      className={`w-full flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${
                         gameSubtype === g.id
                           ? 'border-accent bg-surface'
                           : 'border-line bg-surface hover:border-muted'
@@ -444,9 +463,11 @@ export default function Home() {
                 {SCORING_OPTIONS.map(opt => (
                   <button
                     key={opt.value}
+                    role="radio"
+                    aria-checked={scoringVariant === opt.value}
                     onClick={() => setScoringVariant(opt.value)}
                     className={`w-full flex items-center gap-3 rounded-xl border px-4 py-3
-                                text-left transition-colors ${
+                                text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${
                                   scoringVariant === opt.value
                                     ? 'border-accent bg-surface'
                                     : 'border-line bg-surface hover:border-muted'
@@ -481,8 +502,10 @@ export default function Home() {
                     <div className="text-xs text-muted mt-0.5">Adds ⚬ NT to the trump rotation</div>
                   </div>
                   <button
+                    aria-label="No-trump round"
+                    aria-pressed={noTrumpRound}
                     onClick={() => setNoTrumpRound(v => !v)}
-                    className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
+                    className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${
                       noTrumpRound ? 'bg-accent' : 'bg-bg border border-line'
                     }`}
                   >
@@ -500,8 +523,10 @@ export default function Home() {
                     {[1, 2].map(n => (
                       <button
                         key={n}
+                        aria-pressed={numDecks === n}
+                        aria-label={`${n} deck${n > 1 ? 's' : ''}`}
                         onClick={() => setNumDecks(n)}
-                        className={`w-10 h-8 rounded-lg text-sm font-medium transition-colors ${
+                        className={`w-10 h-8 rounded-lg text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${
                           numDecks === n
                             ? 'bg-accent text-bg'
                             : 'bg-bg border border-line text-ink-2 hover:text-ink'
@@ -521,6 +546,7 @@ export default function Home() {
                     min={1}
                     max={peakCards}
                     onChange={setStartCards}
+                    label="start cards"
                   />
                 </div>
 
@@ -537,6 +563,7 @@ export default function Home() {
                     min={Math.max(startCards, 1)}
                     max={maxCards}
                     onChange={setPeakCards}
+                    label="peak cards"
                   />
                 </div>
 
@@ -566,10 +593,12 @@ export default function Home() {
                     {players.map((_, i) => (
                       <button
                         key={i}
+                        aria-label="Cut for dealer"
                         onClick={cutForDealer}
                         className="w-14 h-20 rounded-xl bg-surface border border-line
                                    flex items-center justify-center text-xl text-muted
-                                   hover:border-accent hover:text-accent transition-colors"
+                                   hover:border-accent hover:text-accent transition-colors
+                                   focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
                       >
                         ✦
                       </button>
@@ -649,27 +678,31 @@ export default function Home() {
   )
 }
 
-function Stepper({ value, min, max, onChange }) {
+function Stepper({ value, min, max, onChange, label = 'value' }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2" role="group">
       <button
+        aria-label={`Decrease ${label}`}
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={value <= min}
         className="w-8 h-8 rounded-lg bg-bg border border-line text-ink
                    hover:border-muted disabled:opacity-30 transition-colors
-                   flex items-center justify-center text-lg leading-none"
+                   flex items-center justify-center text-lg leading-none
+                   focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
       >
         −
       </button>
-      <span className="font-mono text-sm text-ink w-6 text-center tabular-nums">
+      <span className="font-mono text-sm text-ink w-6 text-center tabular-nums" aria-live="polite">
         {value}
       </span>
       <button
+        aria-label={`Increase ${label}`}
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={value >= max}
         className="w-8 h-8 rounded-lg bg-bg border border-line text-ink
                    hover:border-muted disabled:opacity-30 transition-colors
-                   flex items-center justify-center text-lg leading-none"
+                   flex items-center justify-center text-lg leading-none
+                   focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
       >
         +
       </button>
