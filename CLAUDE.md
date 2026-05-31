@@ -293,6 +293,31 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
   - Google OAuth redirect fixed: Supabase Site URL + Redirect URLs updated to `https://kachuful-eight.vercel.app`
   - `game_type` / `game_subtype` columns confirmed added via `add_multi_game_type.sql` migration (resolves "column does not exist" error on History page)
 
+- **Session 12** — security hardening + micro-animations + scheduled routines:
+  - **Security**: tightened `profiles` SELECT policy — was `authenticated` (all users could list all profiles + see `is_admin`); replaced with own-row-only via `supabase/tighten_profiles_policy.sql` migration
+  - **Micro-animations**:
+    - New `src/hooks/useCountUp.js` — `requestAnimationFrame` count-up with ease-out cubic; `duration` and `enabled` options
+    - `src/index.css` — 4 new keyframe animations: `ripple` (bid pad press), `avatar-pulse` (active player ring), `slide-in-right` (rank delta badge), `score-pop` (score reveal)
+    - `BidEntry.jsx` — bid pad buttons play `.bid-press` ripple on press; active-player avatar wrapped in `.avatar-pulse` ring
+    - `ResultsEntry.jsx` — `AnimatedScore` component using `useCountUp` on earned points, MVP score, and standings totals; rank delta badges use `.rank-delta` slide-in
+    - `PlayingScreen.jsx` — `AnimatedTotal` component animates TOTAL row in running tab using `useCountUp`
+  - **Scheduled routines** — 6 CCR remote agents created at `claude.ai/code/routines` (Supabase MCP + Gmail MCP):
+    1. **Prod health check** — daily 9 AM PT; queries Supabase for stuck in-progress games, anomalies; emails ptladit@gmail.com
+    2. **Stuck games cleanup** — daily 8 AM PT; flags games in-progress > 24 h with no recent rounds
+    3. **CLAUDE.md reminder** — weekly Monday 9 AM PT; reminds to update CLAUDE.md after sessions
+    4. **Dependency check** — weekly Monday 10 AM PT; checks for outdated npm packages
+    5. **Signup summary** — weekly Monday 9 AM PT; weekly new user signup counts from Supabase
+    6. **Anon nudge** — weekly Monday 9 AM PT; counts anonymous users with ≥2 games who haven't upgraded
+
+## Tooling & Workflow
+
+### Production URL
+`https://kachuful-eight.vercel.app`
+
+### Scheduled Remote Agents
+6 CCR routines run in Anthropic's cloud against the GitHub repo. Manage at `https://claude.ai/code/routines`.
+Routines use the **Supabase MCP** connector (credentials stored securely by Anthropic — not in code) and **Gmail MCP** for email reports to ptladit@gmail.com.
+
 ## Deferred / Future
 
 - **Offline support** — defer; internet connection assumed for now

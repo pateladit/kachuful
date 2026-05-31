@@ -340,10 +340,18 @@ export default function FinalResults() {
   // Confetti fires once when a recently-ended game loads
   useEffect(() => {
     const endedAt = game?.ended_at
-    if (!endedAt) return
+    if (!endedAt || !players.length || !completedRounds.length) return
     const ageMs = Date.now() - new Date(endedAt).getTime()
     if (ageMs < 10 * 60 * 1000) {
-      confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } })
+      const t = computeTotals(players, completedRounds, game.scoring_variant)
+      const topPlayer = [...players].sort((a, b) => t[b.id] - t[a.id])[0]
+      const color = topPlayer?.color || '#e89a3c'
+      const defs = { colors: [color, '#f6e7d3', '#ffffff', '#e89a3c'], zIndex: 999 }
+      confetti({ ...defs, particleCount: 70, spread: 60, origin: { x: 0.5, y: 0.55 } })
+      setTimeout(() => {
+        confetti({ ...defs, particleCount: 50, angle: 60,  spread: 50, origin: { x: 0,   y: 0.65 } })
+        confetti({ ...defs, particleCount: 50, angle: 120, spread: 50, origin: { x: 1,   y: 0.65 } })
+      }, 350)
     }
   }, [game?.ended_at])
 
@@ -510,7 +518,11 @@ export default function FinalResults() {
         borderRadius: 20, padding: '24px 28px',
         display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
       }}>
-        <Avatar player={winner} size={72} />
+        <div style={{ '--winner-color': `color-mix(in oklab, ${winner.color} 35%, transparent)` }}>
+          <div className="winner-glow" style={{ borderRadius: '50%', padding: 4 }}>
+            <Avatar player={winner} size={72} />
+          </div>
+        </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.16em', textTransform: 'uppercase', color: V.accent, marginBottom: 6 }}>★ Winner</div>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 32, letterSpacing: '-0.02em', color: V.ink }}>{winner.displayName}</div>
@@ -518,6 +530,11 @@ export default function FinalResults() {
             <b style={{ color: V.ink, fontSize: 20 }}>{winnerScore}</b> points
             {sorted.length > 1 && ` · +${winnerScore - totals[sorted[1].id]} over ${sorted[1].displayName}`}
           </div>
+          {overtakeRound && overtakeRound > 1 && (
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.muted, marginTop: 6 }}>
+              ⚡ Took the lead in round {overtakeRound}
+            </div>
+          )}
         </div>
         <div style={{ fontSize: 56, lineHeight: 1 }}>🏆</div>
       </section>
@@ -525,24 +542,34 @@ export default function FinalResults() {
       {/* ─── Podium ─── */}
       {sorted.length >= 2 && (
         <section style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 12 }}>
-          {podiumOrder.map((p, idx) => (
-            <div key={p.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-              <Avatar player={p} size={44} />
-              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: V.ink, textAlign: 'center', maxWidth: 96 }}>{p.displayName}</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: V.ink2 }}>{totals[p.id]}</div>
-              <div style={{
-                width: 96,
-                height: podiumBlockH[idx],
-                background: `color-mix(in oklab, ${p.color} 18%, ${V.surface})`,
-                border: `1px solid color-mix(in oklab, ${p.color} 40%, transparent)`,
-                borderRadius: '10px 10px 0 0',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24,
-              }}>
-                {podiumMedals[idx]}
+          {podiumOrder.map((p, idx) => {
+            // Rise order: 3rd (idx=2) first, then 2nd (idx=0), then 1st (idx=1)
+            const riseDelay = idx === 2 ? 100 : idx === 0 ? 300 : 550
+            return (
+              <div key={p.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                <div className="splash-in" style={{ animationDelay: `${riseDelay + 200}ms`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  <Avatar player={p} size={44} />
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: V.ink, textAlign: 'center', maxWidth: 96 }}>{p.displayName}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: V.ink2 }}>{totals[p.id]}</div>
+                </div>
+                <div
+                  className="podium-rise"
+                  style={{
+                    width: 96,
+                    height: podiumBlockH[idx],
+                    background: `color-mix(in oklab, ${p.color} 18%, ${V.surface})`,
+                    border: `1px solid color-mix(in oklab, ${p.color} 40%, transparent)`,
+                    borderRadius: '10px 10px 0 0',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24,
+                    animationDelay: `${riseDelay}ms`,
+                  }}
+                >
+                  {podiumMedals[idx]}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </section>
       )}
 

@@ -80,3 +80,56 @@
   100% { transform: scale(1);    opacity: 1; }
 }
 .score-pop { animation: score-pop 0.35s ease forwards; }
+
+/* Game-over splash entrance */
+@keyframes splash-in {
+  0%   { opacity: 0; transform: translateY(24px) scale(0.92); }
+  60%  { opacity: 1; transform: translateY(-4px) scale(1.02); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.splash-in { animation: splash-in 0.55s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+/* Podium block rise */
+@keyframes podium-rise {
+  from { transform: scaleY(0); opacity: 0; }
+  to   { transform: scaleY(1); opacity: 1; }
+}
+.podium-rise { animation: podium-rise 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; transform-origin: bottom; }
+
+/* Winner glow pulse */
+@keyframes winner-glow {
+  0%, 100% { box-shadow: 0 0 0 0 var(--winner-color, transparent); }
+  50%       { box-shadow: 0 0 32px 8px var(--winner-color, transparent); }
+}
+.winner-glow { animation: winner-glow 2s ease-in-out infinite; }
+
+/* Ceremony — spotlight fade in */
+@keyframes spotlight-sweep {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Ceremony — name slams down from above */
+@keyframes name-slam {
+  0%   { opacity: 0; transform: translateY(-40px) scaleY(1.25); filter: blur(8px); }
+  65%  { opacity: 1; transform: translateY(4px) scaleY(0.97);  filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0)   scaleY(1);     filter: blur(0); }
+}
+
+/* Ceremony — slide in from left */
+@keyframes slide-from-left {
+  from { opacity: 0; transform: translateX(-28px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Ceremony — curtain rises (clip-path wipe up) */
+@keyframes curtain-rise {
+  from { opacity: 0; clip-path: inset(0 0 100% 0); }
+  to   { opacity: 1; clip-path: inset(0 0 0% 0); }
+}
+
+/* Ceremony — score/stat fade up */
+@keyframes stat-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
