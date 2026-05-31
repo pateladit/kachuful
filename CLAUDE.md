@@ -1,8 +1,9 @@
-# Ka Chu Fu L (Judgement) — Score Tracker
+# Score Tracker — Ka Chu Fu L & more
 
-A card game score tracker for the trick-taking game Ka Chu Fu L, also known as Judgement.
-One logged-in scorekeeper (usually also a player) runs the app, screen-shared to a TV.
-All players at the table are represented as named seats — no multi-device sync required.
+A multi-game companion app for score keeping and data entry, screen-shared to a TV.
+Currently supports **Ka Chu Fu L** (Judgement) with infrastructure for additional card games
+and board games. One logged-in scorekeeper runs the app; all player seats are entered manually.
+No multi-device sync required.
 
 ## Tech Stack
 
@@ -101,15 +102,21 @@ remains correct even if the scoring_variant is ever corrected on the game row.
 | Column | Type | Notes |
 |--------|------|-------|
 | `name` | text | Optional game name e.g. "Diwali Eve 2026" |
-| `scoring_variant` | smallint | 1, 2, or 3 |
-| `num_decks` | smallint | 1 or 2 |
-| `start_cards` | int | Card count for first round (default 1) |
-| `peak_cards` | int | Maximum cards per round |
-| `no_trump_round` | boolean | Whether NT suit is included in rotation |
-| `first_dealer_seat` | int | seat_order of round-1 dealer (chosen via card-cut mechanic) |
+| `game_type` | text | `'card'` or `'board'` (DEFAULT `'card'`) |
+| `game_subtype` | text | e.g. `'kachufull'`, `'spades3'` (DEFAULT `'kachufull'`) |
+| `game_config` | jsonb | Game-specific config mirror (back-filled from Ka Chu Fu L columns) |
+| `scoring_variant` | smallint | Ka Chu Fu L: 1, 2, or 3 |
+| `num_decks` | smallint | Ka Chu Fu L: 1 or 2 |
+| `start_cards` | int | Ka Chu Fu L: card count for first round (default 1) |
+| `peak_cards` | int | Ka Chu Fu L: maximum cards per round |
+| `no_trump_round` | boolean | Ka Chu Fu L: whether NT suit is included in rotation |
+| `first_dealer_seat` | int | Ka Chu Fu L: seat_order of round-1 dealer (chosen via card-cut mechanic) |
 | `status` | text | `'in_progress'` or `'complete'` |
-| `started_at` | timestamptz | Set when game begins (replaces in-app timer) |
+| `started_at` | timestamptz | Set when game begins |
 | `ended_at` | timestamptz | Set when End Game is tapped |
+
+Ka Chu Fu L-specific columns (`scoring_variant` … `first_dealer_seat`) remain for backward compat.
+New game types store their config in `game_config` (JSONB).
 
 ### game_players — key columns
 
@@ -188,7 +195,7 @@ so classes like `bg-bg`, `text-ink`, `border-line` work throughout the app.
 
 | Route | Component | Notes |
 |-------|-----------|-------|
-| `/` | `Home.jsx` | Game setup — player roster, scoring variant, rules config, cut-for-dealer |
+| `/` | `Home.jsx` | Game setup — player roster, game type + game selection, scoring variant, rules config, cut-for-dealer |
 | `/game/:id` | `Game.jsx` | Phase router: loading → bidding (`BidEntry`) → playing (`PlayingScreen` + `ResultsEntry`) → complete |
 | `/game/:id/final` | `FinalResults.jsx` | Standings, score-progression chart, full running tab |
 | `/history` | `History.jsx` | Per-user game history with stats |
@@ -255,8 +262,31 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
   `useHistory` updated to fetch `round_number, cards_dealt, trump_suit, dealer_id` so
   rounds can be normalized to StatsModal format from the history page
 
+- **Session 10** — multi-game type infrastructure + ResultsEntry UX improvements:
+  - `supabase/add_multi_game_type.sql` migration: adds `game_type` (card/board),
+    `game_subtype` (kachufull/spades3/…), `game_config` (JSONB) to `games` table;
+    back-fills `game_config` for existing Ka Chu Fu L rows
+  - `Home.jsx` redesigned setup flow: **Game type** section (Card Game / Board Game toggle)
+    → **Select a game** grid (explicit selection required before config appears);
+    Ka Chu Fu L shows full scoring + rules + cut-for-dealer config; 3 of Spades shows
+    "rules coming soon" placeholder; board games show 3 dimmed "coming soon" tiles;
+    `canStart` gated to `kachufull` only until other games are implemented
+  - `games` INSERT now writes `game_type` + `game_subtype`
+  - `useHistory` + `History.jsx` fetch and display `game_subtype` badge on game cards
+  - `ResultsEntry` bid highlight on number pad (amber tint on the button matching the
+    player's bid) + "✓ Made" quick-fill button next to each player's bid value
+
+## Supported Games
+
+| Subtype | Category | Status | Notes |
+|---------|----------|--------|-------|
+| `kachufull` | card | Full support | Judgement / Oh Hell; complete game loop |
+| `spades3` | card | Placeholder | 3 of Spades; rules/scoring not yet configured |
+| *(board games)* | board | Placeholder | Coming soon; free-form scoring model planned |
+
 ## Deferred / Future
 
 - **Offline support** — defer; internet connection assumed for now
 - **Multi-device sessions** — each player connects on their own phone to view status and submit bids; major architecture pivot, very future
-- **Multi-game support** — game type selector on setup screen (Ka·Chu·Fu·L + others); low-lift: store `game_type` on game row, other types show "coming soon"
+- **3 of Spades rules** — scoring, round structure, and game loop to be defined and implemented
+- **Board game support** — free-form entry scoring model; specific games TBD
