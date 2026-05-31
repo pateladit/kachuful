@@ -95,9 +95,10 @@ export default function Login() {
         {/* Brand */}
         <div className="text-center">
           <div className="font-display font-bold text-4xl tracking-tight text-ink">
-            Ka·Chu·Fu·L
+            Ujagro
           </div>
-          <div className="mt-1.5 text-ink-2 text-sm">Score tracker for Judgement</div>
+          <div className="mt-1 text-ink-2 text-sm">Where every game night begins.</div>
+          <div className="mt-0.5 text-muted text-xs">જ્યાં રાત શરૂ થાય.</div>
         </div>
 
         <div className="bg-surface border border-line rounded-2xl p-6 space-y-5">

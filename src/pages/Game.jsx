@@ -13,7 +13,7 @@ function LoadingScreen() {
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center space-y-3">
-        <div className="font-display font-bold text-3xl text-ink tracking-tight">Ka·Chu·Fu·L</div>
+        <div className="font-display font-bold text-3xl text-ink tracking-tight">Ujagro</div>
         <div className="text-muted text-sm font-mono uppercase tracking-widest">Loading game…</div>
       </div>
     </div>

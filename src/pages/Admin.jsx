@@ -80,7 +80,7 @@ export default function Admin() {
       <header style={{ borderBottom: `1px solid ${V.line}`, padding: '12px 24px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: V.ink }}>Ka·Chu·Fu·L</span>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: V.ink }}>Ujagro</span>
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.muted, marginLeft: 8, letterSpacing: '.1em', textTransform: 'uppercase' }}>· Admin</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

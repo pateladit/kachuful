@@ -172,7 +172,7 @@ export default function Home() {
       <header className="sticky top-0 z-10 bg-bg border-b border-line px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div>
-            <span className="font-display font-bold text-xl text-ink">Ka·Chu·Fu·L</span>
+            <span className="font-display font-bold text-xl text-ink">Ujagro</span>
             <span className="text-muted text-base ml-2">· Game Setup</span>
           </div>
           <AccountMenu />
