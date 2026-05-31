@@ -154,6 +154,51 @@
   outline: none;
 }
 
+/* History page — interactive states */
+.hist-tile {
+  touch-action: manipulation;
+  transition: border-color 0.2s;
+}
+.hist-tile:hover:not([disabled]) { border-color: var(--color-muted) !important; }
+.hist-tile:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.hist-card-outer { transition: border-color 0.2s; }
+.hist-card-outer:hover { border-color: var(--color-muted) !important; }
+
+.hist-card-row {
+  touch-action: manipulation;
+  transition: background 0.15s;
+}
+.hist-card-row:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+
+.hist-new-game {
+  touch-action: manipulation;
+  transition: opacity 0.2s, transform 0.15s;
+}
+.hist-new-game:hover { opacity: 0.92; transform: translateY(-1px); }
+.hist-new-game:active { transform: scale(0.99); }
+.hist-new-game:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.hist-stats-btn {
+  touch-action: manipulation;
+  transition: border-color 0.2s;
+}
+.hist-stats-btn:hover { border-color: var(--color-muted) !important; }
+.hist-stats-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.hist-results-link {
+  touch-action: manipulation;
+  transition: border-color 0.2s, color 0.2s;
+  text-decoration: none;
+}
+.hist-results-link:hover { border-color: var(--color-accent) !important; }
+.hist-results-link:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.hist-try-again {
+  touch-action: manipulation;
+}
+.hist-try-again:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 2px; }
+
 /* Game-over splash entrance */
 @keyframes splash-in {
   0%   { opacity: 0; transform: translateY(24px) scale(0.92); }
