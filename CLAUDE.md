@@ -366,6 +366,16 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
     - `font-variant-numeric: tabular-nums` on all score/count numbers
     - `translate="no"` on brand and game names
 
+- **Session 23** — StatsModal tabbed redesign + group stats:
+  - **`/frontend-design` discussion + implementation on `StatsModal.jsx`** — full redesign from single-scroll sheet to two-tab "Analyst's Booth":
+    - **Tab 1 "At a Glance"**: 2×2 hero grid — Accuracy Leader (watermark = accuracy %, left border = leader's personal color, 🔥/🧊 streak sub-rows), Most Dramatic Round (big round number, N/P failed, trump glyph + card count), The Table (lone wolf count + over/under + total tricks), Group Trump (best/worst suit group accuracy). Honorary Titles section below as **award plaques** — each plaque has large watermark icon (76px, 7% opacity), colored left bar, player list with color dots. Titles: The Oracle, Hot Hand, Ice Cold, The Gambler, Nil Achiever, Closest Call.
+    - **Tab 2 "By Player"**: player chip strip sorted by total score (active chip = player-color border + tint + name in player color + score). Dossier layout: left column (52px accuracy %, 30px streaks side-by-side, 44px trump glyph) + right column (nil bids, accuracy by count, dealer burden) + fun stats bar (best round, risk appetite, bid drift, close calls).
+    - **Animations**: `key="glance"/"player"` on tab panels → `.stats-tab-in` fade+slide on switch; `key={effectiveId}` on PlayerDossier → `.stats-dossier-in` on player switch.
+    - **Hooks bug fixed**: `useMemo` was called after early `return null` — fixed via outer gating component + inner `StatsModalContent` holding all hooks.
+  - **`gameLogic.js`** — 3 new exports: `closestCallCount(playerId, rounds)`, `groupBidStats(players, rounds)` (loneWolfRounds, mostChaotic, overRounds, underRounds, totalTricks), `groupTrumpStats(players, rounds)` (per-suit group accuracy array).
+  - **`index.css`** — `stats-tab-in` / `stats-dossier-in` keyframe animations, `stats-hero-grid` / `stats-dossier-split` / `stats-dossier-left` / `stats-dossier-right` responsive layout classes (2-column → 1-column at ≤560px), `prefers-reduced-motion` guard extended to new classes.
+  - **Deferred from earlier** (also landed): `closestCallCount` wired as `cc` stat per player in the stats object; "Close calls" StatCell added to fun stats bar.
+
 - **Session 22** — ResultsEntry Felt Table redesign + rotating highlight card:
   - **`/frontend-design` pass on `ResultsEntry.jsx`** — full Felt Table aesthetic applied:
     - **Suit-bleed background**: `tint.pageBleed` outer wrapper + `transition: background 0.9s ease` — page hue shifts with trump suit, matching BidEntry + PlayingScreen.
@@ -505,7 +515,7 @@ Design intent captured before the `/frontend-design` pass on `BidEntry`, `Playin
 | `BidEntry.jsx` | ⚠ Needs `/frontend-design` pass | Felt Table aesthetic applied manually Session 20 — still needs the proper skill pass for a formal aesthetic review + any missed opportunities. |
 | `PlayingScreen.jsx` | ✓ Done Session 21 | Felt Table applied (suit-bleed, lattice, watermark, flavor label, player-color bids, live-dot running tab row, WinStreakCard + LoseStreakCard). Full audit pass done. |
 | `ResultsEntry.jsx` | ✓ Done Session 22 | Felt Table applied (suit-bleed, lattice, watermark, flavor label). Running tab sidebar added. Rotating highlight card (Top Scorer / Nil Achiever / Closest Call) with prev/next. leaderIds Set for ties. Sticky lime CTA footer. |
-| `StatsModal.jsx` | ⚠ Needs `/frontend-design` pass | 5-section stat breakdown; purpose + aesthetics need the full skill treatment. |
+| `StatsModal.jsx` | ✓ Done Session 23 | Tabbed redesign: Tab 1 "At a Glance" (2×2 hero grid + honorary title award plaques); Tab 2 "By Player" (player chip strip + dossier: left callouts / right compact sections / fun stats bar). New group stats: groupBidStats, groupTrumpStats, closestCallCount in gameLogic. Hooks-after-early-return bug fixed via outer/inner component split. |
 | `SummaryModal.jsx` | ⚠ Needs `/frontend-design` pass | Game Summary overlay; purpose discussion + redesign needed. |
 
 #### Composition — deferred to after all /frontend-design passes are done
@@ -525,10 +535,10 @@ The preview browser (`preview_start` / `preview_screenshot`) has no Supabase ses
 - **Free Form Entry game — setup page** ✓ done Session 18
 - **Free Form Entry game — game loop** (after setup): round structure (no trump/bid mechanics); scorekeeper enters a raw score per player or per team per round; round_results.score stored directly; running totals shown; End Game same as Ka Chu Fu L
 - **Offline support** — defer; internet connection assumed for now
-- **Session 23 next steps** (in order):
-  1. `/frontend-design` pass on `StatsModal.jsx` — 5-section stat breakdown; purpose + layout redesign; add honorary titles (Nil Achiever, Closest Call King, Most Farthest, etc.) to game-end section
-  2. `/frontend-design` pass on `SummaryModal.jsx` — overlay purpose discussion + redesign
-  3. After all three are done: extract shared `RunningTab` + `GameHeader` components (composition cleanup)
+- **Session 24 next steps** (in order):
+  1. `/frontend-design` pass on `SummaryModal.jsx` — overlay purpose discussion + redesign
+  2. Run `/web-design-guidelines` + `/react-best-practices` audit on `StatsModal.jsx`
+  3. After SummaryModal done: extract shared `RunningTab` + `GameHeader` components (composition cleanup)
   4. Run `/web-design-guidelines` + `/react-best-practices` + `/composition-patterns` audit on each screen after its `/frontend-design` pass
 - **Multi-device sessions** — each player connects on their own phone to view status and submit bids; major architecture pivot, very future
 - **3 of Spades rules** — scoring, round structure, and game loop to be defined and implemented
@@ -536,6 +546,6 @@ The preview browser (`preview_start` / `preview_screenshot`) has no Supabase ses
 - **Emoji retention across games** — add `emoji` column to `game_players` so the SeatEditor can pre-fill the emoji a player used last time, alongside the existing colour pre-fill
 - **Full recurring-player schema** (`saved_players` table) — host can explicitly pin frequent players; schema: `id, user_id, display_name, color, emoji, games_together_count, last_played_at`; upsert after each game; RLS on `user_id`; replaces the lightweight frequency query in `useFrequentPlayers`. Unlocks: pin/unpin UI, richer suggestion ordering, survives game data pruning
 - **Player identity across games** — currently only the host's seat is linked to a Supabase profile (`user_id`); non-host players are anonymous name strings with no cross-game correlation. Long-term: allow non-host players to have accounts so their stats accumulate regardless of who hosts
-- **Group stats in StatsModal / FinalResults** — add a "The Table" section with whole-group stats: how many rounds the group bid over vs under in aggregate (and fun breakdowns); rounds where exactly 1 player failed their bid; rounds where exactly 1 player made their bid; other fun emergent group dynamics
+- **Group stats in FinalResults** — "The Table" hero card and group trump card are now in StatsModal Tab 1; consider surfacing lone wolf count + over/under split in FinalResults standings as well
 - **Rank 1 / top scorer visual treatment** — apply amber gradient highlight to the rank-1 row and top scorer chip so first place has a distinctive glow beyond the medal emoji
 - **Tie handling for rank display** — currently only 1 player is shown as rank 1 in cases of a tied total; expand to award the same rank to all tied players and show multiple winners in `GameOverSplash`, `FinalResults` podium, and `History` winner display
