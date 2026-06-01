@@ -280,3 +280,53 @@ export function netBidDrift(playerId, rounds) {
   }
   return count > 0 ? total / count : null
 }
+
+// Count of completed rounds where the player missed by exactly 1 trick.
+export function closestCallCount(playerId, rounds) {
+  let count = 0
+  for (const r of rounds) {
+    if (!r.took) continue
+    if (Math.abs((r.bids[playerId] ?? 0) - r.took[playerId]) === 1) count++
+  }
+  return count
+}
+
+// Group bid statistics across all completed rounds.
+// Returns { loneWolfRounds, mostChaotic, overRounds, underRounds, totalTricks }
+// mostChaotic: { roundNumber, cards, trump, failCount } | null — round where most players failed.
+// overRounds/underRounds: rounds where sum(bids) > or < cards_dealt (computed on all rounds, not just completed).
+export function groupBidStats(players, rounds) {
+  let loneWolfRounds = 0, overRounds = 0, underRounds = 0, totalTricks = 0
+  let mostChaotic = null
+  for (const r of rounds) {
+    totalTricks += r.cards ?? 0
+    const bidSum = players.reduce((s, p) => s + (r.bids[p.id] ?? 0), 0)
+    if (bidSum > r.cards) overRounds++
+    else if (bidSum < r.cards) underRounds++
+    if (!r.took) continue
+    const failCount = players.filter(p => r.bids[p.id] !== r.took[p.id]).length
+    if (failCount === 1) loneWolfRounds++
+    if (!mostChaotic || failCount > mostChaotic.failCount) {
+      mostChaotic = { roundNumber: r.roundNumber, cards: r.cards, trump: r.trump, failCount }
+    }
+  }
+  return { loneWolfRounds, mostChaotic, overRounds, underRounds, totalTricks }
+}
+
+// Group accuracy per trump suit across all completed rounds.
+// Returns array of { id, glyph, name, made, total, pct }, filtered to suits with data, sorted by total desc.
+export function groupTrumpStats(players, rounds) {
+  const acc = {}
+  for (const t of TRUMPS) acc[t.id] = { id: t.id, glyph: t.glyph, name: t.name, made: 0, total: 0 }
+  for (const r of rounds) {
+    if (!r.took || !acc[r.trump]) continue
+    for (const p of players) {
+      acc[r.trump].total++
+      if (r.bids[p.id] === r.took[p.id]) acc[r.trump].made++
+    }
+  }
+  return Object.values(acc)
+    .filter(t => t.total > 0)
+    .map(t => ({ ...t, pct: Math.round((t.made / t.total) * 100) }))
+    .sort((a, b) => b.total - a.total)
+}
