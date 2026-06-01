@@ -799,8 +799,19 @@ export default function BidEntry({
             </section>
           </div>
 
-          {/* ─── Footer ─── */}
-          <footer style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 20, alignItems: 'center', paddingTop: 16, borderTop: `1px solid ${V.line}` }}>
+          {/* ─── Footer — becomes sticky at viewport bottom when lockReady ─── */}
+          <footer style={{
+            display: 'grid', gridTemplateColumns: '1fr auto', gap: 20, alignItems: 'center',
+            paddingTop: 14, paddingBottom: 14,
+            borderTop: lockReady ? `2px solid color-mix(in oklab, ${V.accent} 45%, transparent)` : `1px solid ${V.line}`,
+            ...(lockReady ? {
+              position: 'sticky',
+              bottom: 0,
+              background: tint.pageBleed,
+              boxShadow: '0 -12px 32px -4px rgba(0,0,0,.45)',
+              zIndex: 10,
+            } : {}),
+          }}>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.muted, letterSpacing: '.06em', lineHeight: 1.55 }}>
               {footerHint}
             </div>
