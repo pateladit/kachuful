@@ -366,6 +366,25 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
     - `font-variant-numeric: tabular-nums` on all score/count numbers
     - `translate="no"` on brand and game names
 
+- **Session 21** — PlayingScreen Felt Table redesign + audit sweep:
+  - **`/frontend-design` discussion-first pass on `PlayingScreen.jsx`** — applied full Felt Table aesthetic:
+    - **Suit-bleed background**: `tint.pageBleed` outer wrapper + `transition: background 0.9s ease` — page hue now shifts with trump (♠ cold steel, ♦ amber, ♣ olive, ♥ crimson, NT neutral), matching BidEntry.
+    - **Diamond lattice**: fixed-position SVG overlay at `opacity: 0.022`, consistent across all game screens.
+    - **Trump card full character**: 130px watermark glyph at 9% opacity behind content; `tint.flavor` label ("cold · commanding" etc.); `tint.labelColor` on label and subtext.
+    - **Locked bids grid**: bid number now renders in each player's personal color (`p.color`). Zero bids → `V.accent3` (lime) + "NIL CALL" label below. Undefined bids → `V.muted` dash. Makes each player's call instantly scannable without reading names.
+    - **Running tab current round row**: replaced "in play" text with the locked bid number prominently displayed + `.live-dot` pulsing amber dot underneath — signals this round is active while giving the table the bid reference they actually need.
+    - **Stats row redesigned** (confirmed by user): `StreakCard` → `WinStreakCard` (streak number in `V.accent3`/lime); `BiggestBidCard` → `LoseStreakCard` (longest *current* consecutive miss run — live shame indicator; card gets red-tinted border only when someone is actively cold); `DealerBurdenCard` unchanged.
+  - **Design decisions captured during discussion**: table uses screen occasionally (checks after a trick is won, not constantly); keep all 3 hero cards (Trump + Cards + Bid sum); bid number + pulsing dot preferred over "in play" text; stats cards kept visible for entertainment value.
+  - **`index.css`**: `@keyframes live-pulse` + `.live-dot` class added (pulsing amber dot; suppressed under `prefers-reduced-motion` via existing `.game-tab-sidebar *` guard).
+  - **Audit fixes** (`/react-best-practices` + `/web-design-guidelines`):
+    - `AnimatedTotal` wrapped in `React.memo` — pause timer fires `setNow` every second; memo prevents TOTAL-row re-renders when `totals` hasn't changed.
+    - `sorted` O(n log n) array → O(n) `leaderId` useMemo using `reduce`; no intermediate array.
+    - `topWinStreak` + `topLoseStreak` merged into single useMemo — one O(n) pass, `playerStreaks` called once per player (was called twice, once per separate useMemo).
+    - `TRUMPS` import removed (unused; only `trumpById` needed).
+    - Curly apostrophe `'` (U+2019) in LoseStreakCard "No one's on a cold streak".
+    - `overscrollBehavior: 'contain'` on PauseOverlay outer div (prevents body scroll bleed-through).
+    - `translate="no"` on Ka·Chu·Fu·L brand in header.
+
 - **Session 20** — BidEntry "Felt Table" redesign + audit sweep (BidEntry + PlayingScreen):
   - **`/frontend-design` pass on BidEntry** — "Felt Table" aesthetic established (will carry forward to all game screens):
     - **Suit-bleed page background**: outer wrapper `background: tint.pageBleed` + `transition: background 0.9s ease`. Page hue shifts with each new trump — ♠ cold steel-blue, ♦ amber-warm, ♣ olive-green, ♥ deep crimson, NT stays neutral. Goal: players associate page mood with the trump before reading the card.
@@ -465,7 +484,7 @@ Design intent captured before the `/frontend-design` pass on `BidEntry`, `Playin
 | Screen | Status | Notes |
 |--------|--------|-------|
 | `BidEntry.jsx` | ⚠ Needs `/frontend-design` pass | Felt Table aesthetic applied manually Session 20 — still needs the proper skill pass for a formal aesthetic review + any missed opportunities. |
-| `PlayingScreen.jsx` | ⚠ Needs `/frontend-design` pass | Redesigned Session 19 but skill not used. Also needs Felt Table treatment (suit-bleed, lattice, watermark, flavor label) from `trumpTint()` — all hooks already in `gameColors.js`. |
+| `PlayingScreen.jsx` | ✓ Done Session 21 | Felt Table applied (suit-bleed, lattice, watermark, flavor label, player-color bids, live-dot running tab row, WinStreakCard + LoseStreakCard). Full audit pass done. |
 | `ResultsEntry.jsx` | ⚠ Needs `/frontend-design` pass | Not yet redesigned — **next up**. Felt Table aesthetic should carry through. Running tab already shares `.game-content`/`.game-tab-sidebar` layout. |
 | `StatsModal.jsx` | ⚠ Needs `/frontend-design` pass | 5-section stat breakdown; purpose + aesthetics need the full skill treatment. |
 | `SummaryModal.jsx` | ⚠ Needs `/frontend-design` pass | Game Summary overlay; purpose discussion + redesign needed. |
@@ -487,13 +506,12 @@ The preview browser (`preview_start` / `preview_screenshot`) has no Supabase ses
 - **Free Form Entry game — setup page** ✓ done Session 18
 - **Free Form Entry game — game loop** (after setup): round structure (no trump/bid mechanics); scorekeeper enters a raw score per player or per team per round; round_results.score stored directly; running totals shown; End Game same as Ka Chu Fu L
 - **Offline support** — defer; internet connection assumed for now
-- **Session 21 next steps** (in order):
-  1. `/frontend-design` pass on `PlayingScreen.jsx` — apply Felt Table (suit-bleed, lattice, watermark, flavor label); all hooks already in `gameColors.js`, just wire them up the same way as BidEntry
-  2. `/frontend-design` pass on `ResultsEntry.jsx` — discussion-first (open-grid vs spotlight model for player entry, running tab sidebar, MVP section, standings); Felt Table carries through
-  3. `/frontend-design` pass on `StatsModal.jsx` — 5-section stat breakdown; purpose + layout redesign
-  4. `/frontend-design` pass on `SummaryModal.jsx` — overlay purpose discussion + redesign
-  5. After all four are done: extract shared `RunningTab` + `GameHeader` components (composition cleanup)
-  6. Run `/web-design-guidelines` + `/react-best-practices` + `/composition-patterns` audit on each screen after its `/frontend-design` pass
+- **Session 22 next steps** (in order):
+  1. `/frontend-design` pass on `ResultsEntry.jsx` — discussion-first (open-grid vs spotlight model for player entry, running tab sidebar, MVP section, standings); Felt Table carries through
+  2. `/frontend-design` pass on `StatsModal.jsx` — 5-section stat breakdown; purpose + layout redesign
+  3. `/frontend-design` pass on `SummaryModal.jsx` — overlay purpose discussion + redesign
+  4. After all three are done: extract shared `RunningTab` + `GameHeader` components (composition cleanup)
+  5. Run `/web-design-guidelines` + `/react-best-practices` + `/composition-patterns` audit on each screen after its `/frontend-design` pass
 - **Multi-device sessions** — each player connects on their own phone to view status and submit bids; major architecture pivot, very future
 - **3 of Spades rules** — scoring, round structure, and game loop to be defined and implemented
 - **Board game support** — free-form entry scoring model; specific games TBD
