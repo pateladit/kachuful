@@ -248,9 +248,11 @@ export default function PlayingScreen({
 
   const totals   = useMemo(() => computeTotals(players, completedRounds, variant), [players, completedRounds, variant])
   const ranks    = useMemo(() => computeRanks(players, totals), [players, totals])
-  const leaderId = useMemo(() =>
-    players.length ? players.reduce((best, p) => totals[p.id] > totals[best] ? p.id : best, players[0].id) : undefined,
-  [players, totals])
+  const leaderIds = useMemo(() => {
+    if (!players.length) return new Set()
+    const maxScore = Math.max(...players.map(p => totals[p.id]))
+    return new Set(players.filter(p => totals[p.id] === maxScore).map(p => p.id))
+  }, [players, totals])
 
   const { minTotal, maxTotal } = useMemo(() => {
     const scores = players.map(p => totals[p.id])
@@ -355,15 +357,21 @@ export default function PlayingScreen({
                 onClick={() => setSummaryOpen(true)}
                 aria-label="Game Summary"
                 title="Game Summary"
-                style={{ background: V.surface, border: `1px solid ${V.line}`, color: V.ink2, width: 36, height: 36, borderRadius: 10, cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 15 }}
-              >◍</button>
+                style={{ background: V.surface, border: `1px solid ${V.line}`, color: V.ink2, height: 36, borderRadius: 10, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 12px' }}
+              >
+                <span aria-hidden style={{ fontSize: 14 }}>◍</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 600 }}>Summary</span>
+              </button>
               <button
                 className="game-icon-btn"
                 onClick={() => setStatsOpen(true)}
                 aria-label="Player Stats"
                 title="Player Stats"
-                style={{ background: V.surface, border: `1px solid ${V.line}`, color: V.ink2, width: 36, height: 36, borderRadius: 10, cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 14 }}
-              >⊞</button>
+                style={{ background: V.surface, border: `1px solid ${V.line}`, color: V.ink2, height: 36, borderRadius: 10, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 12px' }}
+              >
+                <span aria-hidden style={{ fontSize: 13 }}>⊞</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 600 }}>Stats</span>
+              </button>
               <button
                 className="game-icon-btn"
                 onClick={togglePause}
@@ -618,7 +626,7 @@ export default function PlayingScreen({
                         style={{ padding: '8px 6px 8px 14px', background: V.bg2, fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, fontWeight: 600, borderRight: `1px solid ${V.line}` }}
                       >RANK</td>
                       {players.map((p, pi) => (
-                        <td key={p.id} style={{ padding: '8px 4px', background: rankBg(ranks[p.id]?.rank, players.length), textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 12, color: p.id === leaderId ? V.accent : V.ink2, borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none' }}>
+                        <td key={p.id} style={{ padding: '8px 4px', background: rankBg(ranks[p.id]?.rank, players.length), textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 12, color: leaderIds.has(p.id) ? V.accent : V.ink2, borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none' }}>
                           {formatRank(ranks[p.id])}
                         </td>
                       ))}

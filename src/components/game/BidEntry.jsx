@@ -183,8 +183,12 @@ export default function BidEntry({
 
   const variant  = game.scoring_variant
   const totals   = useMemo(() => computeTotals(players, completedRounds, variant), [players, completedRounds, variant])
-  const sorted   = useMemo(() => [...players].sort((a, b) => totals[b.id] - totals[a.id]), [players, totals])
-  const leaderId = sorted[0]?.id
+  const sorted    = useMemo(() => [...players].sort((a, b) => totals[b.id] - totals[a.id]), [players, totals])
+  const leaderIds = useMemo(() => {
+    if (!players.length) return new Set()
+    const maxScore = Math.max(...players.map(p => totals[p.id]))
+    return new Set(players.filter(p => totals[p.id] === maxScore).map(p => p.id))
+  }, [players, totals])
   const ranks    = useMemo(() => computeRanks(players, totals), [players, totals])
   const tabRounds = useMemo(
     () => expanded ? completedRounds : completedRounds.slice(-5),
@@ -278,15 +282,21 @@ export default function BidEntry({
                 onClick={() => setSummaryOpen(true)}
                 aria-label="Game Summary"
                 title="Game Summary"
-                style={{ background: V.surface, border: `1px solid ${V.line}`, color: V.ink2, width: 36, height: 36, borderRadius: 10, cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 15 }}
-              >◍</button>
+                style={{ background: V.surface, border: `1px solid ${V.line}`, color: V.ink2, height: 36, borderRadius: 10, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 12px' }}
+              >
+                <span aria-hidden style={{ fontSize: 14 }}>◍</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 600 }}>Summary</span>
+              </button>
               <button
                 className="game-icon-btn"
                 onClick={() => setStatsOpen(true)}
                 aria-label="Player Stats"
                 title="Player Stats"
-                style={{ background: V.surface, border: `1px solid ${V.line}`, color: V.ink2, width: 36, height: 36, borderRadius: 10, cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 14 }}
-              >⊞</button>
+                style={{ background: V.surface, border: `1px solid ${V.line}`, color: V.ink2, height: 36, borderRadius: 10, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 12px' }}
+              >
+                <span aria-hidden style={{ fontSize: 13 }}>⊞</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 600 }}>Stats</span>
+              </button>
             </div>
 
             {/* Mini leaderboard */}
@@ -752,7 +762,7 @@ export default function BidEntry({
                         style={{ padding: '11px 6px 11px 14px', background: V.surface, fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, fontWeight: 600, borderRight: `1px solid ${V.line}`, borderTop: `2px solid ${V.line}` }}
                       >TOTAL</td>
                       {players.map((p, pi) => (
-                        <td key={p.id} style={{ padding: '11px 4px', background: rankBg(ranks[p.id]?.rank, players.length), textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 19, color: p.id === leaderId ? V.accent : V.ink, letterSpacing: '-0.01em', fontVariantNumeric: 'tabular-nums', borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none', borderTop: `2px solid ${V.line}` }}>
+                        <td key={p.id} style={{ padding: '11px 4px', background: rankBg(ranks[p.id]?.rank, players.length), textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 19, color: leaderIds.has(p.id) ? V.accent : V.ink, letterSpacing: '-0.01em', fontVariantNumeric: 'tabular-nums', borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none', borderTop: `2px solid ${V.line}` }}>
                           {totals[p.id]}
                         </td>
                       ))}
@@ -764,7 +774,7 @@ export default function BidEntry({
                         style={{ padding: '8px 6px 8px 14px', background: V.bg2, fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, fontWeight: 600, borderRight: `1px solid ${V.line}` }}
                       >RANK</td>
                       {players.map((p, pi) => (
-                        <td key={p.id} style={{ padding: '8px 4px', background: rankBg(ranks[p.id]?.rank, players.length), textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 12, color: p.id === leaderId ? V.accent : V.ink2, borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none' }}>
+                        <td key={p.id} style={{ padding: '8px 4px', background: rankBg(ranks[p.id]?.rank, players.length), textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 12, color: leaderIds.has(p.id) ? V.accent : V.ink2, borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none' }}>
                           {formatRank(ranks[p.id])}
                         </td>
                       ))}
