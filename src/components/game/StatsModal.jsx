@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, memo } from 'react'
 import Avatar from './Avatar'
 import {
   TRUMPS,
@@ -117,7 +117,7 @@ function ProgressionChart({ players, rounds, variant, hiddenPlayers, leader }) {
           return (
             <g key={n}>
               <line x1={x} x2={x} y1={padT + plotH} y2={padT + plotH + 4} stroke={V.line} strokeWidth="1" />
-              {n > 0 && <text x={x} y={padT + plotH + 18} textAnchor="middle" fontFamily="var(--font-mono)" fontSize="9" fill={V.muted}>R{n}</text>}
+              {n > 0 ? <text x={x} y={padT + plotH + 18} textAnchor="middle" fontFamily="var(--font-mono)" fontSize="9" fill={V.muted}>R{n}</text> : null}
             </g>
           )
         })}
@@ -141,7 +141,7 @@ function ProgressionChart({ players, rounds, variant, hiddenPlayers, leader }) {
           )
         })}
 
-        {hoverRound != null && (
+        {hoverRound != null ? (
           <g pointerEvents="none">
             <line x1={xFor(hoverRound)} x2={xFor(hoverRound)} y1={padT} y2={padT + plotH} stroke={V.accent} strokeWidth="1.5" strokeDasharray="3 4" opacity="0.7" />
             {drawOrder.map(({ p, pts }) => {
@@ -149,10 +149,10 @@ function ProgressionChart({ players, rounds, variant, hiddenPlayers, leader }) {
               return <circle key={p.id} cx={xFor(hoverRound)} cy={yFor(pts[hoverRound])} r={5} fill={p.color} stroke={V.bg} strokeWidth="2" />
             })}
           </g>
-        )}
+        ) : null}
       </svg>
 
-      {hoverRound != null && tooltipRows.length > 0 && (
+      {hoverRound != null && tooltipRows.length > 0 ? (
         <div style={{
           position: 'absolute', top: 6,
           left:  flipLeft ? 'auto' : `calc(${tipLeftPct}% + 10px)`,
@@ -162,7 +162,7 @@ function ProgressionChart({ players, rounds, variant, hiddenPlayers, leader }) {
         }}>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted, marginBottom: 6, display: 'flex', gap: 8 }}>
             <span>{hoverRound === 0 ? 'Start' : `After R${hoverRound}`}</span>
-            {hovTrump && <span style={{ color: hovTrump.red ? 'var(--color-red-suit)' : V.ink2 }}>{hovTrump.glyph} {rounds[hoverRound - 1].cards}×</span>}
+            {hovTrump ? <span style={{ color: hovTrump.red ? 'var(--color-red-suit)' : V.ink2 }}>{hovTrump.glyph} {rounds[hoverRound - 1].cards}×</span> : null}
           </div>
           {tooltipRows.map(row => (
             <div key={row.p.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
@@ -172,78 +172,158 @@ function ProgressionChart({ players, rounds, variant, hiddenPlayers, leader }) {
             </div>
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }
 
-// ── Column definitions ─────────────────────────────────────────────────────────
-// Each col: key, label (short), sub (tiny), getValue(ps)→number|null,
-//           render(ps)→string, color(ps)→cssColor, highlight ('max'|'calibrated'),
-//           divider (thick left border to separate groups)
-const COLS = [
-  { key: 'acc',       label: 'Acc%',    sub: 'overall',   divider: false, highlight: 'max',
+// ── Metric card definitions ───────────────────────────────────────────────────
+// Each: key, label, sub, icon, iconColor,
+//   sort: 'max' (highest wins) | 'calibrated' (nearest 0 wins)
+//   getValue(ps) → number|null, render(ps) → string|null, color(ps) → cssColor
+const METRIC_CARDS = [
+  { key: 'acc',
+    label: 'Accuracy', sub: 'overall bid accuracy', icon: '◎', iconColor: V.accent3,
+    sort: 'max',
     getValue: ps => ps.acc.total > 0 ? ps.acc.pct : null,
-    render:   ps => ps.acc.total > 0 ? `${ps.acc.pct}%` : '—',
-    color:    ps => ps.acc.total > 0 ? pctColor(ps.acc.pct) : V.muted },
-  { key: 'nil_all',  label: 'Nil',     sub: 'overall',   divider: false, highlight: 'max',
+    render:   ps => ps.acc.total > 0 ? `${ps.acc.pct}%` : null,
+    color:    ps => pctColor(ps.acc.pct) },
+  { key: 'nil',
+    label: 'Nil Mastery', sub: 'bid zero · took zero', icon: '○', iconColor: V.accent3,
+    sort: 'max',
     getValue: ps => ps.nil.overall.count > 0 ? ps.nil.overall.pct : null,
-    render:   ps => ps.nil.overall.count > 0 ? `${ps.nil.overall.pct}%` : '—',
-    color:    ps => ps.nil.overall.count > 0 ? pctColor(ps.nil.overall.pct) : V.muted },
-  { key: 'nil_sm',   label: 'Nil ≤4c', sub: 'small rds', divider: false, highlight: 'max',
-    getValue: ps => ps.nil.small.count > 0 ? ps.nil.small.pct : null,
-    render:   ps => ps.nil.small.count > 0 ? `${ps.nil.small.pct}%` : '—',
-    color:    ps => ps.nil.small.count > 0 ? pctColor(ps.nil.small.pct) : V.muted },
-  { key: 'nil_lg',   label: 'Nil 5+c', sub: 'large rds', divider: false, highlight: 'max',
-    getValue: ps => ps.nil.large.count > 0 ? ps.nil.large.pct : null,
-    render:   ps => ps.nil.large.count > 0 ? `${ps.nil.large.pct}%` : '—',
-    color:    ps => ps.nil.large.count > 0 ? pctColor(ps.nil.large.pct) : V.muted },
-  { key: 'card_sm',  label: '1–4c',    sub: 'accuracy',  divider: false, highlight: 'max',
+    render:   ps => ps.nil.overall.count > 0 ? `${ps.nil.overall.pct}% · ${ps.nil.overall.count}×` : null,
+    color:    ps => pctColor(ps.nil.overall.pct) },
+  { key: 'card_sm',
+    label: 'Small Rounds', sub: '1–4 card accuracy', icon: '≤4', iconColor: V.accent,
+    sort: 'max',
     getValue: ps => ps.cards.small.rounds > 0 ? ps.cards.small.pct : null,
-    render:   ps => ps.cards.small.rounds > 0 ? `${ps.cards.small.pct}%` : '—',
-    color:    ps => ps.cards.small.rounds > 0 ? pctColor(ps.cards.small.pct) : V.muted },
-  { key: 'card_lg',  label: '5+c',     sub: 'accuracy',  divider: false, highlight: 'max',
+    render:   ps => ps.cards.small.rounds > 0 ? `${ps.cards.small.pct}%` : null,
+    color:    ps => pctColor(ps.cards.small.pct) },
+  { key: 'card_lg',
+    label: 'Large Rounds', sub: '5+ card accuracy', icon: '5+', iconColor: V.accent,
+    sort: 'max',
     getValue: ps => ps.cards.large.rounds > 0 ? ps.cards.large.pct : null,
-    render:   ps => ps.cards.large.rounds > 0 ? `${ps.cards.large.pct}%` : '—',
-    color:    ps => ps.cards.large.rounds > 0 ? pctColor(ps.cards.large.pct) : V.muted },
-  { key: 'dealt',    label: 'Dealt',   sub: 'times',     divider: false, highlight: 'max',
-    getValue: ps => ps.dealer.total > 0 ? ps.dealer.total : null,
-    render:   ps => `${ps.dealer.total}×`,
-    color:    ()  => V.ink2 },
-  { key: 'deal_acc', label: 'Dealer%', sub: 'as dealer', divider: false, highlight: 'max',
+    render:   ps => ps.cards.large.rounds > 0 ? `${ps.cards.large.pct}%` : null,
+    color:    ps => pctColor(ps.cards.large.pct) },
+  { key: 'dealer',
+    label: 'Dealer Accuracy', sub: 'accuracy when dealing', icon: '◑', iconColor: V.accent,
+    sort: 'max',
     getValue: ps => ps.dealer.total > 0 ? ps.dealer.pct : null,
-    render:   ps => ps.dealer.total > 0 ? `${ps.dealer.pct}%` : '—',
-    color:    ps => ps.dealer.total > 0 ? pctColor(ps.dealer.pct) : V.muted },
-  // ── Character block (thicker left divider) ──
-  { key: 'hot',      label: '🔥',      sub: 'best streak', divider: true, highlight: 'max',
-    getValue: ps => ps.streaks.madeBest,
-    render:   ps => `${ps.streaks.madeBest}`,
-    color:    ps => ps.streaks.madeBest > 0 ? V.accent3 : V.muted },
-  { key: 'cold',     label: '🧊',      sub: 'miss streak', divider: false, highlight: 'max',
-    getValue: ps => ps.streaks.missedBest,
-    render:   ps => `${ps.streaks.missedBest}`,
-    color:    ps => ps.streaks.missedBest > 0 ? V.accent2 : V.muted },
-  { key: 'best_rnd', label: 'Best rnd', sub: 'score',    divider: false, highlight: 'max',
+    render:   ps => ps.dealer.total > 0 ? `${ps.dealer.pct}% · ${ps.dealer.total}×` : null,
+    color:    ps => pctColor(ps.dealer.pct) },
+  { key: 'hot',
+    label: 'Win Streak', sub: 'best made run', icon: '🔥', iconColor: V.accent3,
+    sort: 'max',
+    getValue: ps => ps.streaks.madeBest > 0 ? ps.streaks.madeBest : null,
+    render:   ps => ps.streaks.madeBest > 0 ? `${ps.streaks.madeBest} in a row` : null,
+    color:    () => V.accent3 },
+  { key: 'cold',
+    label: 'Lose Streak', sub: 'worst miss run', icon: '🧊', iconColor: V.accent2,
+    sort: 'max',
+    getValue: ps => ps.streaks.missedBest > 0 ? ps.streaks.missedBest : null,
+    render:   ps => ps.streaks.missedBest > 0 ? `${ps.streaks.missedBest} in a row` : null,
+    color:    () => V.accent2 },
+  { key: 'best',
+    label: 'Best Round', sub: 'highest single-round score', icon: '★', iconColor: V.accent3,
+    sort: 'max',
     getValue: ps => ps.best,
-    render:   ps => ps.best !== null ? `+${ps.best}` : '—',
-    color:    ps => ps.best !== null ? V.accent3 : V.muted },
-  { key: 'risk',     label: 'Risk%',   sub: 'bid/cards', divider: false, highlight: 'max',
+    render:   ps => ps.best !== null ? `+${ps.best} pts` : null,
+    color:    () => V.accent3 },
+  { key: 'risk',
+    label: 'Risk Appetite', sub: 'avg bid as % of cards dealt', icon: '◈', iconColor: V.accent,
+    sort: 'max',
     getValue: ps => ps.ratio,
-    render:   ps => ps.ratio !== null ? `${Math.round(ps.ratio * 100)}%` : '—',
+    render:   ps => ps.ratio !== null ? `${Math.round(ps.ratio * 100)}%` : null,
     color:    ps => ps.ratio !== null ? (ps.ratio > 0.6 ? V.accent2 : ps.ratio > 0.4 ? V.accent : V.accent3) : V.muted },
-  { key: 'drift',    label: 'Drift',   sub: 'over/under', divider: false, highlight: 'calibrated',
+  { key: 'drift',
+    label: 'Bid Drift', sub: 'avg bid − took · near 0 = calibrated', icon: '≈', iconColor: V.accent,
+    sort: 'calibrated',
     getValue: ps => ps.drift,
-    render:   ps => ps.drift === null ? '—' : ps.drift > 0 ? `+${ps.drift.toFixed(1)}` : ps.drift.toFixed(1),
+    render:   ps => ps.drift !== null ? (ps.drift > 0 ? `+${ps.drift.toFixed(1)}` : ps.drift.toFixed(1)) : null,
     color:    ps => ps.drift === null ? V.muted : Math.abs(ps.drift) < 0.3 ? V.accent3 : V.accent2 },
-  { key: 'close',    label: 'Close',   sub: 'missed ±1', divider: false, highlight: 'max',
+  { key: 'close',
+    label: 'Close Calls', sub: 'times missed by exactly 1', icon: '±1', iconColor: V.accent,
+    sort: 'max',
     getValue: ps => ps.cc > 0 ? ps.cc : null,
-    render:   ps => `${ps.cc}`,
-    color:    ps => ps.cc > 0 ? V.accent : V.muted },
-  { key: 'trump',    label: 'Trump',   sub: 'affinity',  divider: false, highlight: 'max',
+    render:   ps => ps.cc > 0 ? `${ps.cc}×` : null,
+    color:    () => V.accent },
+  { key: 'trump',
+    label: 'Best Trump', sub: 'strongest performing suit', icon: '♠', iconColor: V.ink2,
+    sort: 'max',
     getValue: ps => ps.trump?.pct ?? null,
-    render:   ps => ps.trump ? `${ps.trump.glyph} ${ps.trump.pct}%` : '—',
+    render:   ps => ps.trump ? `${ps.trump.glyph} ${ps.trump.pct}%` : null,
     color:    ps => ps.trump ? pctColor(ps.trump.pct) : V.muted },
 ]
+
+// ── MetricCard ─────────────────────────────────────────────────────────────────
+function MetricCardInner({ card, sorted, stats }) {
+  const ranked = useMemo(() => {
+    const withData = sorted.filter(p => card.getValue(stats[p.id]) !== null)
+    const noData   = sorted.filter(p => card.getValue(stats[p.id]) === null)
+    const sortedWith = [...withData].sort((a, b) => {
+      if (card.sort === 'calibrated') {
+        return Math.abs(card.getValue(stats[a.id])) - Math.abs(card.getValue(stats[b.id]))
+      }
+      return card.getValue(stats[b.id]) - card.getValue(stats[a.id])
+    })
+    return [...sortedWith, ...noData]
+  }, [card, sorted, stats])
+
+  const topVal = ranked.length > 0 ? card.getValue(stats[ranked[0].id]) : null
+
+  const isLeader = p => {
+    const val = card.getValue(stats[p.id])
+    if (val === null || topVal === null) return false
+    if (card.sort === 'calibrated') return Math.abs(Math.abs(val) - Math.abs(topVal)) < 0.05
+    return val === topVal
+  }
+
+  return (
+    <div style={{ background: V.bg2, border: `1px solid ${V.line}`, borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ padding: '11px 14px', borderBottom: `1px solid ${V.line}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: card.iconColor, lineHeight: 1, flexShrink: 0 }} aria-hidden="true">
+          {card.icon}
+        </span>
+        <div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: V.ink2 }}>
+            {card.label}
+          </div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: V.muted, marginTop: 1 }}>
+            {card.sub}
+          </div>
+        </div>
+      </div>
+      {ranked.map((p, i) => {
+        const val      = card.getValue(stats[p.id])
+        const rendered = card.render(stats[p.id])
+        const leader   = isLeader(p)
+        return (
+          <div
+            key={p.id}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 9,
+              padding: '8px 14px',
+              borderBottom: i < ranked.length - 1 ? `1px solid ${V.line}` : 'none',
+              background: leader ? `color-mix(in oklab, ${p.color} 10%, transparent)` : 'transparent',
+            }}
+          >
+            <div style={{ width: 3, height: 22, borderRadius: 2, background: p.color, flexShrink: 0 }} />
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13, color: V.ink, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {p.displayName}
+            </span>
+            {leader ? <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: p.color }} aria-hidden="true">★</span> : null}
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: leader ? 700 : 500, color: val !== null ? card.color(stats[p.id]) : V.muted, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+              {rendered ?? '—'}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+const MetricCard = memo(MetricCardInner)
 
 // ── Hero card (at-a-glance strip) ─────────────────────────────────────────────
 function HeroCard({ leftBorderColor, watermark, children }) {
@@ -310,7 +390,7 @@ const TITLE_DEFS = [
   { key: 'icecold', icon: '❄',  label: 'Ice Cold',     desc: 'Longest miss streak',    color: V.accent2 },
   { key: 'gambler', icon: '◈',  label: 'The Gambler',  desc: 'Most aggressive bidder', color: V.accent  },
   { key: 'nil',     icon: '○',  label: 'Nil Achiever', desc: 'Bid zero · held zero',   color: V.accent3 },
-  { key: 'closest', icon: '≈',  label: 'Closest Call', desc: 'Most one-trick misses',  color: V.accent  },
+  { key: 'closest', icon: '±',  label: 'Closest Call', desc: 'Most one-trick misses',  color: V.accent  },
 ]
 
 // ── Main modal content ─────────────────────────────────────────────────────────
@@ -359,8 +439,8 @@ function StatsModalContent({ onClose, game, players, completedRounds }) {
     const maxMade   = Math.max(...players.map(p => stats[p.id].streaks.madeBest))
     const maxMissed = Math.max(...players.map(p => stats[p.id].streaks.missedBest))
     return {
-      hot:       maxMade   > 0 ? players.filter(p => stats[p.id].streaks.madeBest   === maxMade)   : [],
-      cold:      maxMissed > 0 ? players.filter(p => stats[p.id].streaks.missedBest === maxMissed) : [],
+      hot:        maxMade   > 0 ? players.filter(p => stats[p.id].streaks.madeBest   === maxMade)   : [],
+      cold:       maxMissed > 0 ? players.filter(p => stats[p.id].streaks.missedBest === maxMissed) : [],
       hotStreak:  maxMade,
       coldStreak: maxMissed,
     }
@@ -374,35 +454,14 @@ function StatsModalContent({ onClose, game, players, completedRounds }) {
     const maxRatio  = rList.length > 0 ? Math.max(...rList.map(p => stats[p.id].ratio)) : null
     const maxCC     = Math.max(...players.map(p => stats[p.id].cc))
     return {
-      oracle:  maxAcc   > 0      ? players.filter(p => stats[p.id].acc.pct            === maxAcc)   : [],
-      hothand: maxMade  > 0      ? players.filter(p => stats[p.id].streaks.madeBest   === maxMade)  : [],
-      icecold: maxMissed > 0     ? players.filter(p => stats[p.id].streaks.missedBest === maxMissed): [],
-      gambler: maxRatio !== null ? players.filter(p => stats[p.id].ratio              === maxRatio) : [],
+      oracle:  maxAcc    > 0      ? players.filter(p => stats[p.id].acc.pct            === maxAcc)    : [],
+      hothand: maxMade   > 0      ? players.filter(p => stats[p.id].streaks.madeBest   === maxMade)   : [],
+      icecold: maxMissed > 0      ? players.filter(p => stats[p.id].streaks.missedBest === maxMissed) : [],
+      gambler: maxRatio !== null  ? players.filter(p => stats[p.id].ratio              === maxRatio)  : [],
       nil:     players.filter(p => stats[p.id].nil.overall.made > 0),
-      closest: maxCC   > 0      ? players.filter(p => stats[p.id].cc                 === maxCC)    : [],
+      closest: maxCC    > 0       ? players.filter(p => stats[p.id].cc                === maxCC)     : [],
     }
   }, [players, stats])
-
-  // Per-column highlight leaders
-  const highlights = useMemo(() => {
-    const result = {}
-    for (const col of COLS) {
-      const vals = sorted.map(p => ({ p, v: col.getValue(stats[p.id]) })).filter(x => x.v !== null)
-      if (vals.length === 0) { result[col.key] = []; continue }
-      if (col.highlight === 'calibrated') {
-        const minAbs = Math.min(...vals.map(x => Math.abs(x.v)))
-        result[col.key] = vals.filter(x => Math.abs(Math.abs(x.v) - minAbs) < 0.05).map(x => x.p)
-      } else {
-        const maxV = Math.max(...vals.map(x => x.v))
-        result[col.key] = vals.filter(x => x.v === maxV).map(x => x.p)
-      }
-    }
-    return result
-  }, [sorted, stats])
-
-  // Shared cell styles
-  const thBase = { padding: '7px 10px', textAlign: 'center', borderBottom: `1px solid ${V.line}`, whiteSpace: 'nowrap' }
-  const tdBase = { padding: '9px 10px', textAlign: 'center', borderBottom: `1px solid ${V.line}`, whiteSpace: 'nowrap' }
 
   return (
     <div
@@ -514,7 +573,7 @@ function StatsModalContent({ onClose, game, players, completedRounds }) {
               </div>
             </div>
 
-            {/* ── Group Statistics: score chart ── */}
+            {/* ── Score Progression chart ── */}
             <div style={{ padding: '20px 28px', borderBottom: `1px solid ${V.line}` }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, marginBottom: 14 }}>
                 Score Progression
@@ -552,103 +611,17 @@ function StatsModalContent({ onClose, game, players, completedRounds }) {
               </div>
             </div>
 
-            {/* ── Player Stats Table ── */}
+            {/* ── Player Stats — Metric Cards Grid ── */}
             <div style={{ borderBottom: `1px solid ${V.line}` }}>
-              <div style={{ padding: '18px 28px 12px' }}>
+              <div style={{ padding: '18px 20px 0' }}>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted }}>
                   Player Statistics
                 </div>
               </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ borderCollapse: 'collapse', fontFamily: 'var(--font-mono)', fontSize: 11, tableLayout: 'auto', minWidth: '100%' }}>
-                  <thead>
-                    {/* Highlight row */}
-                    <tr style={{ background: V.bg }}>
-                      <th style={{ ...thBase, textAlign: 'left', paddingLeft: 16, position: 'sticky', left: 0, background: V.bg, zIndex: 2, borderRight: `1px solid ${V.line}`, minWidth: 130 }}>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 8, letterSpacing: '.12em', textTransform: 'uppercase', color: V.muted }}>★ Leads</span>
-                      </th>
-                      {COLS.map(col => {
-                        const leaders = highlights[col.key] ?? []
-                        return (
-                          <th key={col.key} style={{ ...thBase, borderLeft: col.divider ? `2px solid ${V.line}` : `1px solid ${V.line}`, minWidth: 64 }}>
-                            {leaders.length === 0 ? (
-                              <span style={{ color: V.muted, fontSize: 9 }}>—</span>
-                            ) : (
-                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                                {leaders.slice(0, 2).map(p => (
-                                  <span key={p.id} style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 10, color: p.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 58 }}>
-                                    {p.displayName}
-                                  </span>
-                                ))}
-                                {leaders.length > 2 ? <span style={{ color: V.muted, fontSize: 8 }}>+{leaders.length - 2}</span> : null}
-                              </div>
-                            )}
-                          </th>
-                        )
-                      })}
-                    </tr>
-                    {/* Column header row */}
-                    <tr style={{ background: V.bg2 }}>
-                      <th style={{ ...thBase, textAlign: 'left', paddingLeft: 16, position: 'sticky', left: 0, background: V.bg2, zIndex: 2, borderRight: `1px solid ${V.line}`, fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase', color: V.muted, fontWeight: 600 }}>
-                        Player
-                      </th>
-                      {COLS.map(col => (
-                        <th key={col.key} style={{ ...thBase, borderLeft: col.divider ? `2px solid ${V.line}` : `1px solid ${V.line}` }}>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.08em', textTransform: 'uppercase', color: V.muted, fontWeight: 600 }}>{col.label}</div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: V.muted, opacity: 0.6, marginTop: 1 }}>{col.sub}</div>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sorted.map((p, i) => {
-                      const ps = stats[p.id]
-                      const rowBg = i % 2 === 0 ? V.bg2 : 'transparent'
-                      return (
-                        <tr key={p.id} style={{ background: rowBg }}>
-                          {/* Sticky player name */}
-                          <td style={{ ...tdBase, textAlign: 'left', position: 'sticky', left: 0, zIndex: 1, background: i % 2 === 0 ? V.bg2 : V.surface, borderRight: `1px solid ${V.line}`, borderLeft: `4px solid ${p.color}`, paddingLeft: 12 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <Avatar player={p} size={22} />
-                              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13, color: V.ink, whiteSpace: 'nowrap' }}>{p.displayName}</span>
-                            </div>
-                          </td>
-                          {/* Data cells */}
-                          {COLS.map(col => {
-                            const isLeader = highlights[col.key]?.some(lp => lp.id === p.id)
-                            return (
-                              <td
-                                key={col.key}
-                                style={{
-                                  ...tdBase,
-                                  borderLeft: col.divider ? `2px solid ${V.line}` : `1px solid ${V.line}`,
-                                  background: isLeader ? `color-mix(in oklab, ${p.color} 12%, transparent)` : undefined,
-                                  fontVariantNumeric: 'tabular-nums',
-                                }}
-                              >
-                                <span style={{ fontSize: 12, fontWeight: isLeader ? 700 : 500, color: col.color(ps) }}>
-                                  {col.render(ps)}
-                                </span>
-                              </td>
-                            )
-                          })}
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              {/* Glossary */}
-              <div style={{ padding: '12px 28px 16px', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, lineHeight: 1.5 }}>
-                  <b style={{ color: V.ink2 }}>Risk%</b> — avg bid as % of cards dealt.
-                </div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, lineHeight: 1.5 }}>
-                  <b style={{ color: V.ink2 }}>Drift</b> — avg (bid − took). Near 0 = well-calibrated.
-                </div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, lineHeight: 1.5 }}>
-                  <b style={{ color: V.ink2 }}>★ Leads</b> — highlights the column leader; Drift shows "most calibrated".
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10, padding: '14px 20px 20px' }}>
+                {METRIC_CARDS.map(card => (
+                  <MetricCard key={card.key} card={card} sorted={sorted} stats={stats} />
+                ))}
               </div>
             </div>
 

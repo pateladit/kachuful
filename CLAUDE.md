@@ -366,6 +366,16 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
     - `font-variant-numeric: tabular-nums` on all score/count numbers
     - `translate="no"` on brand and game names
 
+- **Session 24** — StatsModal player stats: table → metric cards grid:
+  - **Replaced horizontal-scroll table with responsive metric cards grid** — 12 cards, each card = one stat dimension, all players ranked within it.
+  - **Motivation**: the wide 15-column table was too congested on mobile (phone opened at the table). Cards grid solves this: 1 column on phones (<540px), 2 on tablet, 3 on desktop — readable at any screen width.
+  - **12 metric cards**: Accuracy, Nil Mastery, Small Rounds (1–4c), Large Rounds (5+c), Dealer Accuracy, Win Streak 🔥, Lose Streak 🧊, Best Round, Risk Appetite, Bid Drift, Close Calls, Best Trump.
+  - **Card design**: card header (icon + label + sub-description) → player rows sorted by metric (highest first; Drift: nearest 0 first). Leader row gets `color-mix` player-color tint + ★ marker. Players with no data show `—` at bottom.
+  - **`METRIC_CARDS` module-level array**: each entry has `key, label, sub, icon, iconColor, sort ('max'|'calibrated'), getValue(ps), render(ps), color(ps)` — same pattern as the old `COLS` but drives cards instead of table columns.
+  - **`MetricCard`** component (memoized): internal `useMemo` sorts players per card; `isLeader` handles tie detection including epsilon comparison for 'calibrated' drift.
+  - Removed: `COLS` array, `highlights` useMemo (leader detection moved into each `MetricCard`).
+  - Hero cards strip, score progression chart, and honorary titles unchanged.
+
 - **Session 23** — StatsModal redesign: unified comparison table + group stats + score chart:
   - **`/frontend-design` Q&A + implementation on `StatsModal.jsx`** — iterated through two designs before landing on the right one:
     - **Rejected: tabbed "Analyst's Booth"** — tried Tab 1 (2×2 hero grid + award plaques) / Tab 2 (per-player dossier). Reverted because tabs defeat the core purpose: the stats modal is a nerds view for comparing all players simultaneously in one scroll, not a per-player drill-down.
@@ -521,7 +531,7 @@ Design intent captured before the `/frontend-design` pass on `BidEntry`, `Playin
 | `BidEntry.jsx` | ⚠ Needs `/frontend-design` pass | Felt Table aesthetic applied manually Session 20 — still needs the proper skill pass for a formal aesthetic review + any missed opportunities. |
 | `PlayingScreen.jsx` | ✓ Done Session 21 | Felt Table applied (suit-bleed, lattice, watermark, flavor label, player-color bids, live-dot running tab row, WinStreakCard + LoseStreakCard). Full audit pass done. |
 | `ResultsEntry.jsx` | ✓ Done Session 22 | Felt Table applied (suit-bleed, lattice, watermark, flavor label). Running tab sidebar added. Rotating highlight card (Top Scorer / Nil Achiever / Closest Call) with prev/next. leaderIds Set for ties. Sticky lime CTA footer. |
-| `StatsModal.jsx` | ✓ Done Session 23 | Unified comparison table (rows = players, 15 metric columns, sticky player name col, leader highlight row, player-color left bar + cell tinting). Score progression chart embedded. Hero cards strip + honorary titles (end-game only). Key design rule: single scroll, all players visible simultaneously — tabs or per-player views defeat the comparison purpose. |
+| `StatsModal.jsx` | ✓ Done Session 24 | Hero cards strip + score progression chart (unchanged). Player stats: 12 metric cards grid (1 col phone / 2 col tablet / 3 col desktop) — each card is one stat, all players ranked. Replaces wide 15-column horizontal table which was too congested on mobile. Honorary titles end-game only. Design rule: all players visible at once per dimension, no tabs. |
 | `SummaryModal.jsx` | ⚠ Needs `/frontend-design` pass | Game Summary overlay; purpose discussion + redesign needed. |
 
 #### Composition — deferred to after all /frontend-design passes are done
@@ -541,7 +551,7 @@ The preview browser (`preview_start` / `preview_screenshot`) has no Supabase ses
 - **Free Form Entry game — setup page** ✓ done Session 18
 - **Free Form Entry game — game loop** (after setup): round structure (no trump/bid mechanics); scorekeeper enters a raw score per player or per team per round; round_results.score stored directly; running totals shown; End Game same as Ka Chu Fu L
 - **Offline support** — defer; internet connection assumed for now
-- **Session 24 next steps** (in order):
+- **Session 25 next steps** (in order):
   1. `/frontend-design` pass on `SummaryModal.jsx` — overlay purpose discussion + redesign
   2. Run `/web-design-guidelines` + `/react-best-practices` audit on `StatsModal.jsx`
   3. Extract shared `RunningTab` + `GameHeader` components (composition cleanup)
