@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import Avatar from './Avatar'
 import {
   trumpById,
@@ -35,9 +35,20 @@ function pctColor(pct) {
   return pct >= 50 ? V.accent3 : V.accent2
 }
 
+function Section({ label, children, last }) {
+  return (
+    <div style={{ padding: '20px 28px', ...(!last && { borderBottom: `1px solid ${V.line}` }) }}>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, marginBottom: 12 }}>
+        {label}
+      </div>
+      {children}
+    </div>
+  )
+}
+
 function StatCell({ label, val, sub, color }) {
   return (
-    <div style={{ minWidth: 68, textAlign: 'center' }}>
+    <div style={{ minWidth: 72, textAlign: 'center' }}>
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', color: V.muted }}>{label}</div>
       <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: color ?? V.ink, letterSpacing: '-0.01em' }}>{val}</div>
       {sub ? <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted }}>{sub}</div> : null}
@@ -45,16 +56,20 @@ function StatCell({ label, val, sub, color }) {
   )
 }
 
-function HeroCard({ label, leftBorderColor, watermark, children }) {
+function HeroCard({ leftBorderColor, watermark, children }) {
   return (
     <div style={{
+      flexShrink: 0,
+      width: 192,
       background: V.bg2,
       border: `1px solid ${V.line}`,
-      borderLeft: `4px solid ${leftBorderColor ?? V.line}`,
+      borderLeft: leftBorderColor ? `4px solid ${leftBorderColor}` : `1px solid ${V.line}`,
       borderRadius: 14,
-      padding: '16px 18px',
+      padding: '14px 16px',
       position: 'relative',
       overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
     }}>
       {watermark ? (
         <div aria-hidden="true" style={{
@@ -66,12 +81,17 @@ function HeroCard({ label, leftBorderColor, watermark, children }) {
           {watermark}
         </div>
       ) : null}
-      <div style={{ position: 'relative', zIndex: 1 }}>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase', color: V.muted, marginBottom: 8 }}>
-          {label}
-        </div>
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
         {children}
       </div>
+    </div>
+  )
+}
+
+function HeroLabel({ children }) {
+  return (
+    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase', color: V.muted, marginBottom: 4 }}>
+      {children}
     </div>
   )
 }
@@ -115,174 +135,6 @@ function AwardPlaque({ def, holders }) {
   )
 }
 
-function PlayerDossier({ ps }) {
-  const driftColor = ps.drift === null ? V.muted : Math.abs(ps.drift) < 0.3 ? V.accent3 : V.accent2
-  const driftVal   = ps.drift === null ? '—' : ps.drift > 0 ? `+${ps.drift.toFixed(1)}` : ps.drift.toFixed(1)
-  const nilCats    = [['Overall', ps.nil.overall], ['≤4c', ps.nil.small], ['5+c', ps.nil.large]].filter(([, g]) => g.count > 0)
-  const allCnts    = Object.keys(ps.cards.byCnt).map(Number).sort((a, b) => a - b)
-
-  return (
-    <div className="stats-dossier-in">
-      {/* Left callouts + right sections */}
-      <div className="stats-dossier-split">
-
-        {/* Left: 3 big callouts */}
-        <div className="stats-dossier-left">
-          {/* Accuracy */}
-          <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 52, color: ps.acc.total > 0 ? pctColor(ps.acc.pct) : V.muted, letterSpacing: '-0.05em', lineHeight: 1 }}>
-              {ps.acc.total > 0 ? `${ps.acc.pct}%` : '—'}
-            </div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase', color: V.muted, marginTop: 4 }}>Accuracy</div>
-            {ps.acc.total > 0 ? (
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.ink2, marginTop: 3 }}>{ps.acc.made}/{ps.acc.total} made</div>
-            ) : null}
-          </div>
-
-          {/* Streaks */}
-          <div style={{ borderTop: `1px solid ${V.line}`, paddingTop: 16, marginTop: 16 }}>
-            <div style={{ display: 'flex', gap: 20 }}>
-              <div>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 30, color: ps.streaks.madeBest > 0 ? V.accent3 : V.muted, letterSpacing: '-0.03em', lineHeight: 1 }}>
-                  {ps.streaks.madeBest}
-                </div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted, marginTop: 3 }}>🔥 best</div>
-              </div>
-              <div>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 30, color: ps.streaks.missedBest > 0 ? V.accent2 : V.muted, letterSpacing: '-0.03em', lineHeight: 1 }}>
-                  {ps.streaks.missedBest}
-                </div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted, marginTop: 3 }}>🧊 worst</div>
-              </div>
-            </div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted, marginTop: 6 }}>streaks</div>
-          </div>
-
-          {/* Trump affinity */}
-          <div style={{ borderTop: `1px solid ${V.line}`, paddingTop: 16, marginTop: 16 }}>
-            {ps.trump ? (
-              <>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 44, color: (ps.trump.id === 'hearts' || ps.trump.id === 'diamonds') ? V.accent2 : V.ink, letterSpacing: '-0.03em', lineHeight: 1 }}>
-                  {ps.trump.glyph}
-                </div>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13, color: V.ink2, marginTop: 4 }}>{ps.trump.name}</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted }}>{ps.trump.pct}% on {ps.trump.total}</div>
-              </>
-            ) : (
-              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 44, color: V.muted }}>—</div>
-            )}
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase', color: V.muted, marginTop: 4 }}>Best trump</div>
-          </div>
-        </div>
-
-        {/* Right: compact sections */}
-        <div className="stats-dossier-right">
-          {/* Nil bids */}
-          <div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase', color: V.muted, marginBottom: 8 }}>Zero bids</div>
-            {nilCats.length === 0 ? (
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted }}>No nil bids placed</div>
-            ) : (
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {nilCats.map(([label, g]) => (
-                  <div key={label} style={{ background: V.bg, border: `1px solid ${V.line}`, borderRadius: 8, padding: '6px 10px', textAlign: 'center', minWidth: 56 }}>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 8, letterSpacing: '.1em', textTransform: 'uppercase', color: V.muted }}>{label}</div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: pctColor(g.pct) }}>{g.pct}%</div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: V.muted }}>{g.made}/{g.count}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Accuracy by count */}
-          <div style={{ borderTop: `1px solid ${V.line}`, paddingTop: 14, marginTop: 14 }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase', color: V.muted, marginBottom: 8 }}>Accuracy by count</div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-              {[['1–4 cards', ps.cards.small], ['5+ cards', ps.cards.large]].map(([label, g]) => (
-                <div key={label} style={{ background: V.bg, border: `1px solid ${V.line}`, borderRadius: 8, padding: '6px 10px', textAlign: 'center', minWidth: 72 }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 8, letterSpacing: '.1em', textTransform: 'uppercase', color: V.muted }}>{label}</div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: pctColor(g.pct) }}>
-                    {g.pct !== null ? `${g.pct}%` : '—'}
-                  </div>
-                  {g.rounds > 0 ? <div style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: V.muted }}>{g.made}/{g.rounds}</div> : null}
-                </div>
-              ))}
-            </div>
-            {allCnts.length > 0 ? (
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {allCnts.map(cnt => {
-                  const g = ps.cards.byCnt[cnt]
-                  return (
-                    <div key={cnt} style={{ fontFamily: 'var(--font-mono)', fontSize: 10, display: 'flex', gap: 3, alignItems: 'center' }}>
-                      <span style={{ color: V.ink2 }}>{cnt}c</span>
-                      <span style={{ color: pctColor(g.pct) }}>{g.made}/{g.rounds}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : null}
-          </div>
-
-          {/* Dealer burden */}
-          <div style={{ borderTop: `1px solid ${V.line}`, paddingTop: 14, marginTop: 14 }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase', color: V.muted, marginBottom: 8 }}>Dealer burden</div>
-            {ps.dealer.total === 0 ? (
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted }}>Not dealt yet</div>
-            ) : (
-              <div style={{ display: 'flex', gap: 20, alignItems: 'flex-end' }}>
-                <div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 26, color: V.ink2, letterSpacing: '-0.02em', lineHeight: 1 }}>
-                    {ps.dealer.total}×
-                  </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted, marginTop: 2 }}>times dealt</div>
-                </div>
-                <div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 26, color: pctColor(ps.dealer.pct), letterSpacing: '-0.02em', lineHeight: 1 }}>
-                    {ps.dealer.pct}%
-                  </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted, marginTop: 2 }}>{ps.dealer.made}/{ps.dealer.total} made</div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Fun stats bar */}
-      <div style={{ borderTop: `1px solid ${V.line}`, padding: '14px 20px', display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-        <StatCell
-          label="Best round"
-          val={ps.best !== null ? `+${ps.best}` : '—'}
-          sub="highest score"
-          color={ps.best !== null ? V.accent3 : V.muted}
-        />
-        <StatCell
-          label="Risk appetite"
-          val={ps.ratio !== null ? `${Math.round(ps.ratio * 100)}%` : '—'}
-          sub="avg bid/cards"
-          color={ps.ratio !== null ? (ps.ratio > 0.6 ? V.accent2 : ps.ratio > 0.4 ? V.accent : V.accent3) : V.muted}
-        />
-        <StatCell label="Bid drift" val={driftVal} sub="avg over/under" color={driftColor} />
-        <StatCell
-          label="Close calls"
-          val={ps.cc}
-          sub="missed by ±1"
-          color={ps.cc > 0 ? V.accent : V.muted}
-        />
-      </div>
-      <div style={{ padding: '0 20px 14px', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, lineHeight: 1.5 }}>
-          <b style={{ color: V.ink2 }}>Risk appetite</b> — avg bid as % of cards dealt.
-        </div>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, lineHeight: 1.5 }}>
-          <b style={{ color: V.ink2 }}>Bid drift</b> — avg (bid − took). Positive = overbids; negative = underbids.
-        </div>
-      </div>
-    </div>
-  )
-}
-
 const TITLE_DEFS = [
   { key: 'oracle',  icon: '◎', label: 'The Oracle',   desc: 'Highest accuracy',       color: V.accent3 },
   { key: 'hothand', icon: '🔥', label: 'Hot Hand',     desc: 'Longest made streak',    color: V.accent3 },
@@ -293,9 +145,6 @@ const TITLE_DEFS = [
 ]
 
 function StatsModalContent({ onClose, game, players, completedRounds }) {
-  const [activeTab, setActiveTab]           = useState('glance')
-  const [selectedPlayerId, setSelectedPlayerId] = useState(null)
-
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
@@ -303,6 +152,7 @@ function StatsModalContent({ onClose, game, players, completedRounds }) {
   }, [onClose])
 
   const variant = game.scoring_variant
+  const isComplete = game.status === 'complete'
 
   const totals = useMemo(
     () => computeTotals(players, completedRounds, variant),
@@ -365,15 +215,12 @@ function StatsModalContent({ onClose, game, players, completedRounds }) {
     }
   }, [players, stats])
 
-  const effectiveId    = selectedPlayerId ?? sorted[0]?.id ?? null
-  const selectedPlayer = players.find(p => p.id === effectiveId) ?? null
-
   return (
     <div
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0,
-        background: 'rgba(26,14,21,.78)',
+        background: 'rgba(26,14,21,.75)',
         backdropFilter: 'blur(6px)',
         zIndex: 100, overflowY: 'auto',
         padding: '40px 16px',
@@ -389,143 +236,100 @@ function StatsModalContent({ onClose, game, players, completedRounds }) {
           overflow: 'hidden',
         }}
       >
-        {/* ── Header ── */}
-        <div style={{ padding: '22px 28px 14px', borderBottom: `1px solid ${V.line}` }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
-            <div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted }}>
-                Stats · {completedRounds.length} rounds
-              </div>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, letterSpacing: '-0.01em', color: V.ink, margin: '5px 0 0' }} translate="no">
-                {game.name || 'Ka·Chu·Fu·L'}
-              </h2>
+        {/* Header */}
+        <div style={{ padding: '24px 28px 20px', borderBottom: `1px solid ${V.line}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted }}>
+              Stats · {completedRounds.length} rounds played
             </div>
-            <button
-              onClick={onClose}
-              aria-label="Close stats"
-              style={{ background: 'transparent', border: 'none', color: V.muted, fontSize: 24, cursor: 'pointer', lineHeight: 1, padding: '0 4px', marginTop: 2, touchAction: 'manipulation' }}
-            >×</button>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24, letterSpacing: '-0.01em', color: V.ink, margin: '6px 0 0' }} translate="no">
+              {game.name || 'Ka·Chu·Fu·L'}
+            </h2>
           </div>
-          {/* Tab pills */}
-          <div role="tablist" style={{ display: 'flex', gap: 4 }}>
-            {[['glance', 'At a Glance'], ['player', 'By Player']].map(([tab, label]) => (
-              <button
-                key={tab}
-                role="tab"
-                aria-selected={activeTab === tab}
-                onClick={() => setActiveTab(tab)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: 20,
-                  border: 'none',
-                  background: activeTab === tab ? V.accent : 'transparent',
-                  color: activeTab === tab ? '#2a1620' : V.muted,
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
-                  letterSpacing: '.1em',
-                  textTransform: 'uppercase',
-                  cursor: 'pointer',
-                  fontWeight: activeTab === tab ? 700 : 400,
-                  transition: 'background 0.15s ease, color 0.15s ease',
-                  touchAction: 'manipulation',
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close stats"
+            style={{ background: 'transparent', border: 'none', color: V.muted, fontSize: 24, cursor: 'pointer', lineHeight: 1, padding: '0 4px', touchAction: 'manipulation' }}
+          >×</button>
         </div>
 
         {completedRounds.length === 0 ? (
           <div style={{ padding: '40px 28px', textAlign: 'center', color: V.muted, fontFamily: 'var(--font-mono)', fontSize: 12 }}>
             No completed rounds yet
           </div>
-        ) : activeTab === 'glance' ? (
-          <div key="glance" className="stats-tab-in" role="tabpanel">
-            {/* 2×2 Hero grid */}
-            <div style={{ padding: '18px 24px', borderBottom: `1px solid ${V.line}` }}>
+        ) : (
+          <>
+            {/* ── Hero Cards Strip ── */}
+            <div style={{ padding: '18px 28px 0', borderBottom: `1px solid ${V.line}` }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase', color: V.muted, marginBottom: 10 }}>
                 At a glance
               </div>
-              <div className="stats-hero-grid">
+              <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 18, scrollbarWidth: 'thin' }}>
 
                 {/* Accuracy Leader */}
-                <HeroCard
-                  label="Accuracy Leader"
-                  leftBorderColor={accLeader ? accLeader.players[0].color : V.line}
-                  watermark={accLeader ? String(accLeader.pct) : '—'}
-                >
-                  {accLeader ? (
-                    <>
-                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 40, color: accLeader.players[0].color, letterSpacing: '-0.04em', lineHeight: 1 }}>
-                        {accLeader.pct}%
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 4 }}>
-                        {accLeader.players.slice(0, 2).map(p => (
-                          <span key={p.id} style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 12, color: p.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 100 }}>
-                            {p.displayName}
+                {accLeader ? (
+                  <HeroCard leftBorderColor={accLeader.players[0].color} watermark={String(accLeader.pct)}>
+                    <HeroLabel>Accuracy Leader</HeroLabel>
+                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 36, color: accLeader.players[0].color, letterSpacing: '-0.04em', lineHeight: 1 }}>
+                      {accLeader.pct}%
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 4 }}>
+                      {accLeader.players.slice(0, 2).map(p => (
+                        <span key={p.id} style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 12, color: p.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 88 }}>
+                          {p.displayName}
+                        </span>
+                      ))}
+                      {accLeader.players.length > 2 ? <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted }}>+{accLeader.players.length - 2}</span> : null}
+                    </div>
+                    <div style={{ marginTop: 10, borderTop: `1px solid ${V.line}`, paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {streakLeaders.hot.length > 0 ? (
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.accent3, display: 'flex', gap: 5, overflow: 'hidden' }}>
+                          <span aria-hidden="true">🔥</span>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {streakLeaders.hot[0].displayName} · {streakLeaders.hotStreak}
                           </span>
-                        ))}
-                        {accLeader.players.length > 2 ? <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted }}>+{accLeader.players.length - 2}</span> : null}
-                      </div>
-                      <div style={{ marginTop: 10, borderTop: `1px solid ${V.line}`, paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {streakLeaders.hot.length > 0 ? (
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.accent3, display: 'flex', gap: 5, overflow: 'hidden' }}>
-                            <span aria-hidden="true">🔥</span>
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {streakLeaders.hot[0].displayName} · {streakLeaders.hotStreak}
-                            </span>
-                          </div>
-                        ) : null}
-                        {streakLeaders.cold.length > 0 ? (
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.accent2, display: 'flex', gap: 5, overflow: 'hidden' }}>
-                            <span aria-hidden="true">🧊</span>
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {streakLeaders.cold[0].displayName} · {streakLeaders.coldStreak}
-                            </span>
-                          </div>
-                        ) : null}
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.muted }}>No data yet</div>
-                  )}
-                </HeroCard>
+                        </div>
+                      ) : null}
+                      {streakLeaders.cold.length > 0 ? (
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.accent2, display: 'flex', gap: 5, overflow: 'hidden' }}>
+                          <span aria-hidden="true">🧊</span>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {streakLeaders.cold[0].displayName} · {streakLeaders.coldStreak}
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                  </HeroCard>
+                ) : null}
 
                 {/* Most Dramatic Round */}
-                <HeroCard
-                  label="Most Dramatic"
-                  leftBorderColor={V.accent2}
-                  watermark={grpBid.mostChaotic ? String(grpBid.mostChaotic.roundNumber) : '?'}
-                >
-                  {grpBid.mostChaotic && grpBid.mostChaotic.failCount > 0 ? (
-                    <>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted, letterSpacing: '.1em', textTransform: 'uppercase' }}>Round</div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 44, color: V.accent2, letterSpacing: '-0.05em', lineHeight: 1 }}>
-                        {grpBid.mostChaotic.roundNumber}
-                      </div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: V.accent2, marginTop: 4 }}>
-                        {grpBid.mostChaotic.failCount}/{players.length} failed
-                      </div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, marginTop: 6 }}>
-                        {trumpById.get(grpBid.mostChaotic.trump)?.glyph ?? '?'} · {grpBid.mostChaotic.cards}c
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.muted }}>No drama yet</div>
-                  )}
-                </HeroCard>
+                {grpBid.mostChaotic && grpBid.mostChaotic.failCount > 0 ? (
+                  <HeroCard leftBorderColor={V.accent2} watermark={String(grpBid.mostChaotic.roundNumber)}>
+                    <HeroLabel>Most Dramatic</HeroLabel>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted, letterSpacing: '.1em', textTransform: 'uppercase' }}>Round</div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 44, color: V.accent2, letterSpacing: '-0.05em', lineHeight: 1 }}>
+                      {grpBid.mostChaotic.roundNumber}
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.accent2, marginTop: 4 }}>
+                      {grpBid.mostChaotic.failCount}/{players.length} failed
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, marginTop: 6 }}>
+                      {trumpById.get(grpBid.mostChaotic.trump)?.glyph ?? '?'} · {grpBid.mostChaotic.cards}c
+                    </div>
+                  </HeroCard>
+                ) : null}
 
                 {/* The Table */}
-                <HeroCard label="The Table" leftBorderColor={V.accent} watermark="≡">
+                <HeroCard leftBorderColor={V.accent} watermark="≡">
+                  <HeroLabel>The Table</HeroLabel>
                   <div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 36, color: V.accent, letterSpacing: '-0.04em', lineHeight: 1 }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 32, color: V.accent, letterSpacing: '-0.04em', lineHeight: 1 }}>
                       {grpBid.loneWolfRounds}
                     </div>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted, marginTop: 3 }}>lone wolf rounds</div>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted }}>only 1 player fell</div>
                   </div>
-                  <div style={{ marginTop: 12, borderTop: `1px solid ${V.line}`, paddingTop: 10 }}>
+                  <div style={{ marginTop: 10, borderTop: `1px solid ${V.line}`, paddingTop: 8 }}>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.ink2 }}>
                       {grpBid.overRounds} over · {grpBid.underRounds} under
                     </div>
@@ -537,86 +341,225 @@ function StatsModalContent({ onClose, game, players, completedRounds }) {
 
                 {/* Group Trump */}
                 {grpTrumpSorted.length >= 2 ? (
-                  <HeroCard label="Group Trump" leftBorderColor={V.accent3} watermark={grpTrumpSorted[0].glyph}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <HeroCard leftBorderColor={V.accent3} watermark={grpTrumpSorted[0].glyph}>
+                    <HeroLabel>Group Trump</HeroLabel>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 2 }}>
                       <div>
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 8, letterSpacing: '.1em', textTransform: 'uppercase', color: V.muted }}>Best</div>
-                        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24, color: V.accent3, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: V.accent3, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
                           {grpTrumpSorted[0].glyph} {grpTrumpSorted[0].pct}%
                         </div>
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted }}>{grpTrumpSorted[0].name}</div>
                       </div>
-                      <div style={{ borderTop: `1px solid ${V.line}`, paddingTop: 10 }}>
+                      <div style={{ borderTop: `1px solid ${V.line}`, paddingTop: 8 }}>
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 8, letterSpacing: '.1em', textTransform: 'uppercase', color: V.muted }}>Worst</div>
-                        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24, color: V.accent2, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: V.accent2, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
                           {grpTrumpSorted[grpTrumpSorted.length - 1].glyph} {grpTrumpSorted[grpTrumpSorted.length - 1].pct}%
                         </div>
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted }}>{grpTrumpSorted[grpTrumpSorted.length - 1].name}</div>
                       </div>
                     </div>
                   </HeroCard>
-                ) : (
-                  <HeroCard label="Group Trump" leftBorderColor={V.line} watermark="?">
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.muted }}>Need 2+ suits played</div>
-                  </HeroCard>
-                )}
+                ) : null}
               </div>
             </div>
 
-            {/* Honorary Titles */}
-            <div style={{ padding: '18px 24px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, marginBottom: 12 }}>
-                Honorary Titles
+            {/* ── Section 1: Zero bids ── */}
+            <Section label="Zero bids · called nil">
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+                  <thead>
+                    <tr style={{ background: V.bg2 }}>
+                      {['Player', 'Overall', '≤4 cards', '5+ cards'].map(h => (
+                        <th key={h} scope="col" style={{
+                          textAlign: h === 'Player' ? 'left' : 'center',
+                          padding: '8px 12px',
+                          color: V.muted, fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase',
+                          borderBottom: `1px solid ${V.line}`,
+                        }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sorted.map((p, i) => {
+                      const nil = stats[p.id].nil
+                      const cell = g => g.count === 0
+                        ? <span style={{ color: V.muted }}>—</span>
+                        : (
+                          <div>
+                            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: pctColor(g.pct) }}>{g.pct}%</div>
+                            <div style={{ color: V.muted, fontSize: 9 }}>{g.made}/{g.count} made</div>
+                          </div>
+                        )
+                      return (
+                        <tr key={p.id} style={{ background: i % 2 === 0 ? V.bg2 : 'transparent' }}>
+                          <td style={{ padding: '10px 12px', borderBottom: `1px solid ${V.line}` }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <Avatar player={p} size={28} />
+                              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13, color: V.ink }}>{p.displayName}</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '10px 12px', borderBottom: `1px solid ${V.line}`, textAlign: 'center' }}>{cell(nil.overall)}</td>
+                          <td style={{ padding: '10px 12px', borderBottom: `1px solid ${V.line}`, textAlign: 'center' }}>{cell(nil.small)}</td>
+                          <td style={{ padding: '10px 12px', borderBottom: `1px solid ${V.line}`, textAlign: 'center' }}>{cell(nil.large)}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
-                {TITLE_DEFS.map(def => {
-                  const holders = titles[def.key]
-                  if (!holders || holders.length === 0) return null
-                  return <AwardPlaque key={def.key} def={def} holders={holders} />
+            </Section>
+
+            {/* ── Section 2: Accuracy by card count ── */}
+            <Section label="Accuracy by card count">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {sorted.map(p => {
+                  const cs = stats[p.id].cards
+                  const allCnts = Object.keys(cs.byCnt).map(Number).sort((a, b) => a - b)
+                  return (
+                    <div key={p.id} style={{ background: V.bg2, border: `1px solid ${V.line}`, borderRadius: 12, padding: '14px 16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: allCnts.length > 0 ? 10 : 0, flexWrap: 'wrap' }}>
+                        <Avatar player={p} size={36} />
+                        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15, color: V.ink }}>{p.displayName}</div>
+                        <div style={{ display: 'flex', gap: 10, marginLeft: 'auto', flexWrap: 'wrap' }}>
+                          {[['1–4', cs.small], ['5+', cs.large]].map(([label, g]) => (
+                            <div key={label} style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 8, padding: '6px 12px', textAlign: 'center', minWidth: 68 }}>
+                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', color: V.muted }}>{label} cards</div>
+                              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: pctColor(g.pct) }}>
+                                {g.pct !== null ? `${g.pct}%` : '—'}
+                              </div>
+                              {g.rounds > 0 ? <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted }}>{g.made}/{g.rounds}</div> : null}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      {allCnts.length > 0 ? (
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          {allCnts.map(cnt => {
+                            const g = cs.byCnt[cnt]
+                            return (
+                              <div key={cnt} style={{ fontFamily: 'var(--font-mono)', fontSize: 10, display: 'flex', gap: 3, alignItems: 'center' }}>
+                                <span style={{ color: V.ink2 }}>{cnt}c</span>
+                                <span style={{ color: pctColor(g.pct) }}>{g.made}/{g.rounds}</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
+                  )
                 })}
               </div>
-            </div>
-          </div>
-        ) : (
-          <div key="player" className="stats-tab-in" role="tabpanel">
-            {/* Player chip strip */}
-            <div style={{ padding: '12px 24px', borderBottom: `1px solid ${V.line}`, display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'thin' }}>
-              {sorted.map(p => {
-                const isActive = effectiveId === p.id
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => setSelectedPlayerId(p.id)}
-                    aria-label={`View stats for ${p.displayName}`}
-                    style={{
-                      flexShrink: 0,
-                      display: 'flex', alignItems: 'center', gap: 7,
-                      padding: '7px 12px',
-                      background: isActive ? `${p.color}1a` : 'transparent',
-                      border: `2px solid ${isActive ? p.color : 'transparent'}`,
-                      borderRadius: 32,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      touchAction: 'manipulation',
-                    }}
-                  >
-                    <Avatar player={p} size={26} />
-                    <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13, color: isActive ? p.color : V.ink2, whiteSpace: 'nowrap' }}>
-                      {p.displayName}
-                    </span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: isActive ? p.color : V.muted, fontVariantNumeric: 'tabular-nums' }}>
-                      {totals[p.id]}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
+            </Section>
 
-            {/* Player dossier */}
-            {selectedPlayer ? (
-              <PlayerDossier key={effectiveId} ps={stats[selectedPlayer.id]} />
+            {/* ── Section 3: Dealer burden ── */}
+            <Section label="Dealer burden">
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+                  <thead>
+                    <tr style={{ background: V.bg2 }}>
+                      {['Player', 'Times dealt', 'Made/total', 'Success %'].map(h => (
+                        <th key={h} scope="col" style={{
+                          textAlign: h === 'Player' ? 'left' : 'center',
+                          padding: '8px 12px',
+                          color: V.muted, fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase',
+                          borderBottom: `1px solid ${V.line}`,
+                        }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sorted.map((p, i) => {
+                      const d = stats[p.id].dealer
+                      return (
+                        <tr key={p.id} style={{ background: i % 2 === 0 ? V.bg2 : 'transparent' }}>
+                          <td style={{ padding: '10px 12px', borderBottom: `1px solid ${V.line}` }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <Avatar player={p} size={28} />
+                              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13, color: V.ink }}>{p.displayName}</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '10px 12px', borderBottom: `1px solid ${V.line}`, textAlign: 'center', color: V.ink2 }}>{d.total}</td>
+                          <td style={{ padding: '10px 12px', borderBottom: `1px solid ${V.line}`, textAlign: 'center', color: V.ink2 }}>
+                            {d.total > 0 ? `${d.made}/${d.total}` : '—'}
+                          </td>
+                          <td style={{ padding: '10px 12px', borderBottom: `1px solid ${V.line}`, textAlign: 'center' }}>
+                            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: pctColor(d.pct) }}>
+                              {d.pct !== null ? `${d.pct}%` : '—'}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Section>
+
+            {/* ── Section 4: Streaks ── */}
+            <Section label="Best streaks">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {sorted.map(p => {
+                  const sk = stats[p.id].streaks
+                  return (
+                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 16, background: V.bg2, border: `1px solid ${V.line}`, borderRadius: 12, padding: '12px 16px', flexWrap: 'wrap' }}>
+                      <Avatar player={p} size={44} />
+                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 16, color: V.ink, flex: 1, minWidth: 80 }}>{p.displayName}</div>
+                      <div style={{ display: 'flex', gap: 24, textAlign: 'center' }}>
+                        <StatCell label="Best made" val={sk.madeBest} sub="in a row" color={V.accent3} />
+                        <StatCell label="Best missed" val={sk.missedBest} sub="in a row" color={sk.missedBest > 0 ? V.accent2 : V.muted} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </Section>
+
+            {/* ── Section 5: Fun stats ── */}
+            <Section label="Fun stats" last={!isComplete}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {sorted.map(p => {
+                  const { best, trump, ratio, drift, cc } = stats[p.id]
+                  const driftColor = drift === null ? V.muted : Math.abs(drift) < 0.3 ? V.accent3 : V.accent2
+                  const driftVal   = drift === null ? '—' : drift > 0 ? `+${drift.toFixed(1)}` : drift.toFixed(1)
+                  return (
+                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 16, background: V.bg2, border: `1px solid ${V.line}`, borderRadius: 12, padding: '12px 16px', flexWrap: 'wrap' }}>
+                      <Avatar player={p} size={36} />
+                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15, color: V.ink, minWidth: 80 }}>{p.displayName}</div>
+                      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                        <StatCell label="Best round" val={best !== null ? `+${best}` : '—'} sub="highest score" color={best !== null ? V.accent3 : V.muted} />
+                        <StatCell label="Trump affinity" val={trump ? `${trump.glyph} ${trump.name}` : '—'} sub={trump ? `${trump.pct}% on ${trump.total}` : undefined} />
+                        <StatCell label="Risk appetite" val={ratio !== null ? `${Math.round(ratio * 100)}%` : '—'} sub="avg bid/cards" color={ratio !== null ? (ratio > 0.6 ? V.accent2 : ratio > 0.4 ? V.accent : V.accent3) : V.muted} />
+                        <StatCell label="Bid drift" val={driftVal} sub="avg over/under" color={driftColor} />
+                        <StatCell label="Close calls" val={cc} sub="missed by ±1" color={cc > 0 ? V.accent : V.muted} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div style={{ marginTop: 12, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, lineHeight: 1.5 }}>
+                  <b style={{ color: V.ink2 }}>Risk appetite</b> — avg bid as % of cards dealt. Higher = more aggressive bidder.
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, lineHeight: 1.5 }}>
+                  <b style={{ color: V.ink2 }}>Bid drift</b> — avg (bid − took) per round. Positive = tends to overbid; negative = tends to underbid; near 0 = well-calibrated.
+                </div>
+              </div>
+            </Section>
+
+            {/* ── Section 6: Honorary Titles — end-game only ── */}
+            {isComplete ? (
+              <Section label="Honorary Titles" last>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                  {TITLE_DEFS.map(def => {
+                    const holders = titles[def.key]
+                    if (!holders || holders.length === 0) return null
+                    return <AwardPlaque key={def.key} def={def} holders={holders} />
+                  })}
+                </div>
+              </Section>
             ) : null}
-          </div>
+          </>
         )}
       </div>
     </div>
