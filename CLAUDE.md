@@ -366,15 +366,21 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
     - `font-variant-numeric: tabular-nums` on all score/count numbers
     - `translate="no"` on brand and game names
 
-- **Session 23** — StatsModal tabbed redesign + group stats:
-  - **`/frontend-design` discussion + implementation on `StatsModal.jsx`** — full redesign from single-scroll sheet to two-tab "Analyst's Booth":
-    - **Tab 1 "At a Glance"**: 2×2 hero grid — Accuracy Leader (watermark = accuracy %, left border = leader's personal color, 🔥/🧊 streak sub-rows), Most Dramatic Round (big round number, N/P failed, trump glyph + card count), The Table (lone wolf count + over/under + total tricks), Group Trump (best/worst suit group accuracy). Honorary Titles section below as **award plaques** — each plaque has large watermark icon (76px, 7% opacity), colored left bar, player list with color dots. Titles: The Oracle, Hot Hand, Ice Cold, The Gambler, Nil Achiever, Closest Call.
-    - **Tab 2 "By Player"**: player chip strip sorted by total score (active chip = player-color border + tint + name in player color + score). Dossier layout: left column (52px accuracy %, 30px streaks side-by-side, 44px trump glyph) + right column (nil bids, accuracy by count, dealer burden) + fun stats bar (best round, risk appetite, bid drift, close calls).
-    - **Animations**: `key="glance"/"player"` on tab panels → `.stats-tab-in` fade+slide on switch; `key={effectiveId}` on PlayerDossier → `.stats-dossier-in` on player switch.
-    - **Hooks bug fixed**: `useMemo` was called after early `return null` — fixed via outer gating component + inner `StatsModalContent` holding all hooks.
+- **Session 23** — StatsModal redesign: unified comparison table + group stats + score chart:
+  - **`/frontend-design` Q&A + implementation on `StatsModal.jsx`** — iterated through two designs before landing on the right one:
+    - **Rejected: tabbed "Analyst's Booth"** — tried Tab 1 (2×2 hero grid + award plaques) / Tab 2 (per-player dossier). Reverted because tabs defeat the core purpose: the stats modal is a nerds view for comparing all players simultaneously in one scroll, not a per-player drill-down.
+    - **Shipped: unified single-scroll table** — rows = players, columns = 15 metrics. All players visible at once for cross-table comparison.
+  - **Structure (top to bottom)**:
+    - **Hero cards strip** (unchanged): Accuracy Leader + 🔥/🧊 streak sub-rows, Most Dramatic Round, The Table (lone wolf/over-under/tricks), Group Trump (best/worst suit).
+    - **Score Progression chart**: same interactive SVG chart as FinalResults — cumulative score per player across rounds, hover tooltip, player toggle chips to show/hide lines. Current leader's line is bold.
+    - **Player Stats table** (horizontal scroll):
+      - **★ Leads row** (above column headers): per-column leader names in their personal color; Drift column shows "most calibrated" (nearest to 0).
+      - **Column headers**: two groups separated by thicker divider — Accuracy block (Acc% / Nil / Nil ≤4c / Nil 5+c / 1–4c / 5+c / Dealt / Dealer%) and Character block (🔥 / 🧊 / Best rnd / Risk% / Drift / Close / Trump).
+      - **Player rows**: sticky left name column with 4px player-color left bar; leader cells get `color-mix` player-color tint; values in semantic colors (lime/red/amber).
+    - **Honorary Titles** (end-game only): award plaque grid — The Oracle, Hot Hand, Ice Cold, The Gambler, Nil Achiever, Closest Call. Each plaque has watermark icon + colored left bar + player list.
   - **`gameLogic.js`** — 3 new exports: `closestCallCount(playerId, rounds)`, `groupBidStats(players, rounds)` (loneWolfRounds, mostChaotic, overRounds, underRounds, totalTricks), `groupTrumpStats(players, rounds)` (per-suit group accuracy array).
-  - **`index.css`** — `stats-tab-in` / `stats-dossier-in` keyframe animations, `stats-hero-grid` / `stats-dossier-split` / `stats-dossier-left` / `stats-dossier-right` responsive layout classes (2-column → 1-column at ≤560px), `prefers-reduced-motion` guard extended to new classes.
-  - **Deferred from earlier** (also landed): `closestCallCount` wired as `cc` stat per player in the stats object; "Close calls" StatCell added to fun stats bar.
+  - **Architecture fix**: `useMemo` was called after early `return null` (rules-of-hooks violation). Fixed via outer `StatsModal` gating component + inner `StatsModalContent` holding all hooks.
+  - **Design principle captured**: StatsModal purpose = side-by-side comparison across all players. Single scroll, all players visible in every section. Tabs/per-player views defeat this.
 
 - **Session 22** — ResultsEntry Felt Table redesign + rotating highlight card:
   - **`/frontend-design` pass on `ResultsEntry.jsx`** — full Felt Table aesthetic applied:
@@ -515,7 +521,7 @@ Design intent captured before the `/frontend-design` pass on `BidEntry`, `Playin
 | `BidEntry.jsx` | ⚠ Needs `/frontend-design` pass | Felt Table aesthetic applied manually Session 20 — still needs the proper skill pass for a formal aesthetic review + any missed opportunities. |
 | `PlayingScreen.jsx` | ✓ Done Session 21 | Felt Table applied (suit-bleed, lattice, watermark, flavor label, player-color bids, live-dot running tab row, WinStreakCard + LoseStreakCard). Full audit pass done. |
 | `ResultsEntry.jsx` | ✓ Done Session 22 | Felt Table applied (suit-bleed, lattice, watermark, flavor label). Running tab sidebar added. Rotating highlight card (Top Scorer / Nil Achiever / Closest Call) with prev/next. leaderIds Set for ties. Sticky lime CTA footer. |
-| `StatsModal.jsx` | ✓ Done Session 23 | Tabbed redesign: Tab 1 "At a Glance" (2×2 hero grid + honorary title award plaques); Tab 2 "By Player" (player chip strip + dossier: left callouts / right compact sections / fun stats bar). New group stats: groupBidStats, groupTrumpStats, closestCallCount in gameLogic. Hooks-after-early-return bug fixed via outer/inner component split. |
+| `StatsModal.jsx` | ✓ Done Session 23 | Unified comparison table (rows = players, 15 metric columns, sticky player name col, leader highlight row, player-color left bar + cell tinting). Score progression chart embedded. Hero cards strip + honorary titles (end-game only). Key design rule: single scroll, all players visible simultaneously — tabs or per-player views defeat the comparison purpose. |
 | `SummaryModal.jsx` | ⚠ Needs `/frontend-design` pass | Game Summary overlay; purpose discussion + redesign needed. |
 
 #### Composition — deferred to after all /frontend-design passes are done
@@ -538,8 +544,8 @@ The preview browser (`preview_start` / `preview_screenshot`) has no Supabase ses
 - **Session 24 next steps** (in order):
   1. `/frontend-design` pass on `SummaryModal.jsx` — overlay purpose discussion + redesign
   2. Run `/web-design-guidelines` + `/react-best-practices` audit on `StatsModal.jsx`
-  3. After SummaryModal done: extract shared `RunningTab` + `GameHeader` components (composition cleanup)
-  4. Run `/web-design-guidelines` + `/react-best-practices` + `/composition-patterns` audit on each screen after its `/frontend-design` pass
+  3. Extract shared `RunningTab` + `GameHeader` components (composition cleanup)
+  4. Run `/web-design-guidelines` + `/react-best-practices` + `/composition-patterns` audit on each remaining screen
 - **Multi-device sessions** — each player connects on their own phone to view status and submit bids; major architecture pivot, very future
 - **3 of Spades rules** — scoring, round structure, and game loop to be defined and implemented
 - **Board game support** — free-form entry scoring model; specific games TBD
