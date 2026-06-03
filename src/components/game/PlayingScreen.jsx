@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useCountUp } from '../../hooks/useCountUp'
 import Avatar from './Avatar'
-import GameTimer from './GameTimer'
 import SummaryModal from './SummaryModal'
 import StatsModal from './StatsModal'
-import AccountMenu from '../AccountMenu'
 import {
   trumpById,
   computeTotals,
@@ -13,6 +11,8 @@ import {
   playerStreaks,
 } from '../../lib/gameLogic'
 import { trumpTint } from '../../lib/gameColors'
+import GameHeader from './GameHeader'
+import RunningTab from './RunningTab'
 
 const V = {
   bg:      'var(--color-bg, #211218)',
@@ -30,23 +30,10 @@ const V = {
 // Diamond lattice — same 2% texture used on login, history, BidEntry
 const LATTICE_SVG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Cpath d='M18 0 L36 18 L18 36 L0 18 Z' fill='none' stroke='white' stroke-width='0.6'/%3E%3C/svg%3E")`
 
-function formatRank(rk) {
-  if (!rk) return '—'
-  const n = rk.rank
-  return `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'}`
-}
-
 function totalColor(score, min, max) {
   if (max === min) return V.ink
   const t = (score - min) / (max - min)
   return `color-mix(in oklab, ${V.accent3} ${Math.round(t * 100)}%, ${V.accent2})`
-}
-
-function rankBg(rank, n) {
-  if (n <= 1 || !rank) return 'transparent'
-  const t = (rank - 1) / (n - 1)
-  const base = `color-mix(in oklab, #ef4444 ${Math.round(t * 100)}%, #22c55e)`
-  return `color-mix(in oklab, ${base} 40%, transparent)`
 }
 
 const AnimatedTotal = React.memo(function AnimatedTotal({ value }) {
@@ -334,62 +321,40 @@ export default function PlayingScreen({
         }}>
 
           {/* ─── Header ─── */}
-          <header style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 20, paddingBottom: 14, borderBottom: `1px solid ${V.line}` }}>
-            <div>
-              <div translate="no" style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, letterSpacing: '-0.01em', color: V.ink }}>
-                Ka
-                <span aria-hidden style={{ display: 'inline-block', width: '.22em', height: '.22em', background: V.accent, borderRadius: '50%', margin: '0 .03em .15em', verticalAlign: 'middle' }} />
-                Chu
-                <span aria-hidden style={{ display: 'inline-block', width: '.22em', height: '.22em', background: V.accent, borderRadius: '50%', margin: '0 .03em .15em', verticalAlign: 'middle' }} />
-                Fu
-                <span aria-hidden style={{ display: 'inline-block', width: '.22em', height: '.22em', background: V.accent, borderRadius: '50%', margin: '0 .03em .15em', verticalAlign: 'middle' }} />
-                L
-              </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, marginTop: 4 }}>
-                {game.name ? `${game.name} · ` : ''}Round {roundNumber} · playing
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <GameTimer startedAt={game.started_at} />
-              <button
-                className="game-icon-btn"
-                onClick={() => setSummaryOpen(true)}
-                aria-label="Game Summary"
-                title="Game Summary"
-                style={{ background: V.surface, border: `1px solid ${V.line}`, color: V.ink2, height: 36, borderRadius: 10, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 12px' }}
-              >
-                <span aria-hidden style={{ fontSize: 14 }}>◍</span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 600 }}>Summary</span>
-              </button>
-              <button
-                className="game-icon-btn"
-                onClick={() => setStatsOpen(true)}
-                aria-label="Player Stats"
-                title="Player Stats"
-                style={{ background: V.surface, border: `1px solid ${V.line}`, color: V.ink2, height: 36, borderRadius: 10, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 12px' }}
-              >
-                <span aria-hidden style={{ fontSize: 13 }}>⊞</span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 600 }}>Stats</span>
-              </button>
-              <button
-                className="game-icon-btn"
-                onClick={togglePause}
-                aria-label={paused ? 'Resume game' : 'Pause for chai'}
-                title={paused ? 'Resume' : 'Pause for chai'}
-                style={{
-                  background: paused ? `color-mix(in oklab, ${V.accent2} 18%, ${V.surface})` : V.surface,
-                  border: `1px solid ${paused ? V.accent2 : V.line}`,
-                  color: paused ? V.accent2 : V.ink2,
-                  width: 36, height: 36, borderRadius: 10, cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 15,
-                }}
-              >{paused ? '▶' : '☕'}</button>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <AccountMenu />
-            </div>
-          </header>
+          <GameHeader game={game} roundNumber={roundNumber} phase="playing">
+            <button
+              className="game-icon-btn"
+              onClick={() => setSummaryOpen(true)}
+              aria-label="Game Summary"
+              title="Game Summary"
+              style={{ background: V.surface, border: `1px solid ${V.line}`, color: V.ink2, height: 36, borderRadius: 10, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 12px' }}
+            >
+              <span aria-hidden style={{ fontSize: 14 }}>◍</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 600 }}>Summary</span>
+            </button>
+            <button
+              className="game-icon-btn"
+              onClick={() => setStatsOpen(true)}
+              aria-label="Player Stats"
+              title="Player Stats"
+              style={{ background: V.surface, border: `1px solid ${V.line}`, color: V.ink2, height: 36, borderRadius: 10, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 12px' }}
+            >
+              <span aria-hidden style={{ fontSize: 13 }}>⊞</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 600 }}>Stats</span>
+            </button>
+            <button
+              className="game-icon-btn"
+              onClick={togglePause}
+              aria-label={paused ? 'Resume game' : 'Pause for chai'}
+              title={paused ? 'Resume' : 'Pause for chai'}
+              style={{
+                background: paused ? `color-mix(in oklab, ${V.accent2} 18%, ${V.surface})` : V.surface,
+                border: `1px solid ${paused ? V.accent2 : V.line}`,
+                color: paused ? V.accent2 : V.ink2,
+                width: 36, height: 36, borderRadius: 10, cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 15,
+              }}
+            >{paused ? '▶' : '☕'}</button>
+          </GameHeader>
 
           {/* ─── Hero ─── */}
           <section style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1.2fr', gap: 14 }} aria-label="Round information">
@@ -519,136 +484,48 @@ export default function PlayingScreen({
             </section>
 
             {/* Running tab — right sidebar on desktop, below on mobile */}
-            <section className="game-tab-sidebar" aria-label="Running score tab" style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 20, overflow: 'hidden' }}>
-              <div style={{ padding: '14px 18px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
-                <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 16, letterSpacing: '-0.01em', margin: 0, color: V.ink }}>
-                  Running tab
-                  <small style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted, letterSpacing: '.14em', textTransform: 'uppercase', marginLeft: 8, fontWeight: 500 }}>
-                    {completedRounds.length} of {completedRounds.length + 1} rounds
-                  </small>
-                </h2>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, flexShrink: 0 }}>
-                  <span aria-hidden style={{ color: V.accent3 }}>●</span> made&nbsp;
-                  <span aria-hidden style={{ color: V.accent2 }}>●</span> missed
-                </div>
-              </div>
-
-              <div style={{ borderTop: `1px solid ${V.line}`, overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-mono)', fontSize: 12, tableLayout: 'fixed' }}>
-                  <thead>
-                    <tr>
-                      <th
-                        scope="col"
-                        className="game-tab-round-cell"
-                        style={{ textAlign: 'left', padding: '9px 6px 9px 14px', background: V.surface, color: V.muted, fontWeight: 600, fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', width: 60, borderBottom: `1px solid ${V.line}`, borderRight: `1px solid ${V.line}` }}
-                      >Rnd</th>
-                      {players.map((p, i) => (
-                        <th scope="col" key={p.id} style={{ padding: '9px 4px', background: V.surface, textAlign: 'center', borderBottom: `1px solid ${V.line}`, borderRight: i < players.length - 1 ? `1px solid ${V.line}` : 'none' }}>
-                          <Avatar player={p} size={22} />
-                          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 11, color: i === dealerIdx ? V.accent : V.ink, display: 'block', marginTop: 2, textTransform: 'none', letterSpacing: 0 }}>{p.displayName}</span>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tabRounds.map(r => {
-                      const tr = trumpById.get(r.trump)
-                      return (
-                        <tr key={r.id}>
-                          <td
-                            className="game-tab-round-cell"
-                            style={{ textAlign: 'left', padding: '7px 6px 7px 14px', borderBottom: `1px solid ${V.line}`, borderRight: `1px solid ${V.line}`, fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 12, color: V.ink, background: V.bg2 }}
-                          >
-                            R{r.roundNumber}
-                            <span aria-hidden style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: tr?.red ? '#e57860' : V.muted, marginLeft: 3 }}>{tr?.glyph}</span>
-                          </td>
-                          {players.map((p, pi) => {
-                            const b = r.bids[p.id], k = r.took?.[p.id]
-                            const made = b !== undefined && k !== undefined && b === k
-                            const pts = b !== undefined && k !== undefined ? scoreFor(b, k, variant) : null
-                            return (
-                              <td key={p.id} style={{ padding: '7px 4px', textAlign: 'center', borderBottom: `1px solid ${V.line}`, borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none', background: pts === null ? 'transparent' : made ? `color-mix(in oklab, ${V.accent3} 14%, transparent)` : `color-mix(in oklab, ${V.accent2} 14%, transparent)` }}>
-                                <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1 }}>
-                                  <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, letterSpacing: '-0.02em', color: pts === null ? V.muted : made ? V.accent3 : V.accent2 }}>{pts === null ? '—' : made ? `+${pts}` : '0'}</span>
-                                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.ink2, opacity: .75, marginTop: 1 }}>{b ?? '—'}/{k ?? '—'}</span>
-                                </div>
-                              </td>
-                            )
-                          })}
-                        </tr>
-                      )
-                    })}
-
-                    {/* Current round — bids locked, playing now. Show bid + live dot. */}
-                    <tr>
-                      <td
-                        className="game-tab-round-cell"
-                        style={{ textAlign: 'left', padding: '7px 6px 7px 14px', borderBottom: `1px solid ${V.line}`, borderRight: `1px solid ${V.line}`, fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 12, color: V.accent, background: `color-mix(in oklab, ${V.accent} 6%, ${V.bg2})` }}
-                      >
-                        R{roundNumber}
-                        <span aria-hidden style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.accent, opacity: .65, marginLeft: 3 }}>{trump?.glyph}</span>
-                      </td>
-                      {players.map((p, pi) => {
-                        const bid = pendingRound?.bids[p.id]
-                        return (
-                          <td key={p.id} style={{ padding: '7px 4px', textAlign: 'center', borderBottom: `1px solid ${V.line}`, borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none', background: `color-mix(in oklab, ${V.accent} 8%, transparent)` }}>
-                            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1 }}>
-                              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, letterSpacing: '-0.02em', color: bid === 0 ? V.accent3 : V.ink }}>
-                                {bid ?? '—'}
-                              </span>
-                              <span
-                                aria-hidden
-                                className="live-dot"
-                                style={{ width: 5, height: 5, borderRadius: '50%', background: V.accent, marginTop: 3, display: 'block' }}
-                              />
-                            </div>
-                          </td>
-                        )
-                      })}
-                    </tr>
-
-                    {/* TOTAL */}
-                    <tr>
-                      <td
-                        className="game-tab-round-cell"
-                        style={{ padding: '11px 6px 11px 14px', background: V.surface, fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, fontWeight: 600, borderRight: `1px solid ${V.line}`, borderTop: `2px solid ${V.line}` }}
-                      >TOTAL</td>
-                      {players.map((p, pi) => (
-                        <td key={p.id} style={{ padding: '11px 4px', background: rankBg(ranks[p.id]?.rank, players.length), textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 19, color: totalColor(totals[p.id], minTotal, maxTotal), letterSpacing: '-0.01em', fontVariantNumeric: 'tabular-nums', borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none', borderTop: `2px solid ${V.line}` }}>
-                          <AnimatedTotal value={totals[p.id]} />
-                        </td>
-                      ))}
-                    </tr>
-                    {/* RANK */}
-                    <tr>
-                      <td
-                        className="game-tab-round-cell"
-                        style={{ padding: '8px 6px 8px 14px', background: V.bg2, fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, fontWeight: 600, borderRight: `1px solid ${V.line}` }}
-                      >RANK</td>
-                      {players.map((p, pi) => (
-                        <td key={p.id} style={{ padding: '8px 4px', background: rankBg(ranks[p.id]?.rank, players.length), textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 12, color: leaderIds.has(p.id) ? V.accent : V.ink2, borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none' }}>
-                          {formatRank(ranks[p.id])}
-                        </td>
-                      ))}
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {completedRounds.length > 5 ? (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: 10, borderTop: `1px solid ${V.line}`, background: V.bg2 }}>
-                  <button
-                    onClick={() => setExpanded(e => !e)}
-                    aria-expanded={expanded}
-                    className="game-icon-btn game-expand-btn"
-                    style={{ background: 'transparent', border: `1px solid ${V.line}`, color: V.ink2, fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', padding: '6px 14px', borderRadius: 999, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5, touchAction: 'manipulation' }}
+            <RunningTab
+              players={players}
+              completedRounds={completedRounds}
+              tabRounds={tabRounds}
+              dealerIdx={dealerIdx}
+              variant={variant}
+              totals={totals}
+              ranks={ranks}
+              leaderIds={leaderIds}
+              expanded={expanded}
+              onToggleExpand={() => setExpanded(e => !e)}
+              totalCellColor={p => totalColor(totals[p.id], minTotal, maxTotal)}
+              renderTotal={p => <AnimatedTotal value={totals[p.id]} />}
+              renderCurrentRound={() => (
+                <tr>
+                  <td
+                    className="game-tab-round-cell"
+                    style={{ textAlign: 'left', padding: '7px 6px 7px 14px', borderBottom: `1px solid ${V.line}`, borderRight: `1px solid ${V.line}`, fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 12, color: V.accent, background: `color-mix(in oklab, ${V.accent} 6%, ${V.bg2})` }}
                   >
-                    {expanded ? 'Collapse' : `All ${completedRounds.length} rounds`}
-                    <span aria-hidden style={{ display: 'inline-block', transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform .25s ease' }}>↓</span>
-                  </button>
-                </div>
-              ) : null}
-            </section>
+                    R{roundNumber}
+                    <span aria-hidden style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.accent, opacity: .65, marginLeft: 3 }}>{trump?.glyph}</span>
+                  </td>
+                  {players.map((p, pi) => {
+                    const bid = pendingRound?.bids[p.id]
+                    return (
+                      <td key={p.id} style={{ padding: '7px 4px', textAlign: 'center', borderBottom: `1px solid ${V.line}`, borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none', background: `color-mix(in oklab, ${V.accent} 8%, transparent)` }}>
+                        <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1 }}>
+                          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, letterSpacing: '-0.02em', color: bid === 0 ? V.accent3 : V.ink }}>
+                            {bid ?? '—'}
+                          </span>
+                          <span
+                            aria-hidden
+                            className="live-dot"
+                            style={{ width: 5, height: 5, borderRadius: '50%', background: V.accent, marginTop: 3, display: 'block' }}
+                          />
+                        </div>
+                      </td>
+                    )
+                  })}
+                </tr>
+              )}
+            />
           </div>
 
           {/* ─── Stats row — full width ─── */}

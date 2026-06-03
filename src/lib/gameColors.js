@@ -45,3 +45,16 @@ export function trumpTint(trump) {
     pageBleed:  'color-mix(in oklab, #280808 7%, var(--color-bg, #211218))',
   }
 }
+
+export function formatRank(rk) {
+  if (!rk) return '—'
+  const n = rk.rank
+  return `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'}`
+}
+
+export function rankBg(rank, n) {
+  if (n <= 1 || !rank) return 'transparent'
+  const t = (rank - 1) / (n - 1)
+  const base = `color-mix(in oklab, #ef4444 ${Math.round(t * 100)}%, #22c55e)`
+  return `color-mix(in oklab, ${base} 40%, transparent)`
+}

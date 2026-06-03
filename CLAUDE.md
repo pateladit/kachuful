@@ -594,10 +594,16 @@ The preview browser (`preview_start` / `preview_screenshot`) has no Supabase ses
     - `streakLeaders` useMemo: 4 passes (2× spread max, 2× filter) → 1 loop + up to 2 filters
     - `titles` useMemo: 11 passes (5× spread max, 6× filter) → 1 loop + up to 6 filters
 
+- **Session 25 (continued)** — `/composition-patterns` audit + `GameHeader` + `RunningTab` extraction:
+  - **`/composition-patterns` findings**: `GameHeader` brand lockup (~60 lines × 3) and `RunningTab` score table (~130 lines × 3) were copy-pasted identically across `BidEntry`, `PlayingScreen`, `ResultsEntry`; `formatRank` + `rankBg` tripled too
+  - **`src/components/game/GameHeader.jsx`** — new shared component: Ka·Chu·Fu·L lockup + round/phase subheading + `children` center slot (timer + phase buttons) + `right` slot (defaults to `<AccountMenu />`); memoized
+  - **`src/components/game/RunningTab.jsx`** — new shared component: completed-rounds table + TOTAL/RANK footer + expand button; `renderCurrentRound` render prop for phase-specific current-round `<tr>`; `renderTotal` + `totalCellColor` optional overrides for TOTAL row animation/color
+  - **`src/lib/gameColors.js`** — `formatRank` + `rankBg` exported here; removed from all 3 screen files
+  - **Net**: BidEntry 865→727 lines, PlayingScreen 722→599, ResultsEntry 804→665; ~400 lines removed from callers, replaced by ~200 lines in 2 shared files
+
 - **Session 26 next steps** (in order):
   1. `/frontend-design` pass on `SummaryModal.jsx` — overlay purpose discussion + redesign
-  2. Extract shared `RunningTab` + `GameHeader` components (composition cleanup)
-  3. Run `/web-design-guidelines` + `/react-best-practices` + `/composition-patterns` audit on remaining screens
+  2. Run `/web-design-guidelines` + `/react-best-practices` audit on remaining screens (`BidEntry`, `PlayingScreen`, `ResultsEntry`, `SummaryModal`)
 - **Multi-device sessions** — each player connects on their own phone to view status and submit bids; major architecture pivot, very future
 - **3 of Spades rules** — scoring, round structure, and game loop to be defined and implemented
 - **Board game support** — free-form entry scoring model; specific games TBD
