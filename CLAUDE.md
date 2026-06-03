@@ -601,9 +601,18 @@ The preview browser (`preview_start` / `preview_screenshot`) has no Supabase ses
   - **`src/lib/gameColors.js`** — `formatRank` + `rankBg` exported here; removed from all 3 screen files
   - **Net**: BidEntry 865→727 lines, PlayingScreen 722→599, ResultsEntry 804→665; ~400 lines removed from callers, replaced by ~200 lines in 2 shared files
 
-- **Session 26 next steps** (in order):
-  1. `/frontend-design` pass on `SummaryModal.jsx` — overlay purpose discussion + redesign
-  2. Run `/web-design-guidelines` + `/react-best-practices` audit on `GameHeader.jsx`, `RunningTab.jsx`, and remaining screens (`BidEntry`, `PlayingScreen`, `ResultsEntry`, `SummaryModal`)
+- **Session 26** — `SummaryModal.jsx` `/frontend-design` pass:
+  - **Design direction** (Q&A): TV-display moment (whole table reads from across the room) · Leader card is the hero · Full Felt Table aesthetic · Keep compact per-player stats
+  - **Leader Hero section**: 5px left bar in leader's personal color; leader name 34px in personal color; score 60px in V.ink; trump glyph 172px watermark behind; section background `color-mix` washed in leader's color; "+N ahead of Player2" subtext
+  - **Standings section**: replaces old "per-player stats" cards — tight row per player: 4px color bar · rank · avatar · name · score (22px) · Acc% / 🔥 best / 🧊 best stat chips
+  - **Felt Table**: suit-tinted modal panel background via `color-mix(tint.pageBleed 22%, V.surface)`; diamond lattice on backdrop; trump watermark in hero; `transition: background 0.7s ease` on panel
+  - **Accessibility**: `role="dialog"` + `aria-modal="true"` + `aria-label`; `overscrollBehavior: 'contain'`; `touchAction: 'manipulation'` on buttons; `fontVariantNumeric: 'tabular-nums'` on all score cells; close button uses `stats-close-btn` class
+  - **Cleanup**: removed local `formatRank`/`rankBg` (now from `gameColors`); replaced `TRUMPS.find()` with `trumpById.get()`; removed unused `trumpPerformance` import
+
+- **Session 27 next steps** (in order):
+  1. Run `/web-design-guidelines` + `/react-best-practices` audit on `SummaryModal.jsx`
+  2. Run `/web-design-guidelines` + `/react-best-practices` audit on `GameHeader.jsx` + `RunningTab.jsx`
+  3. Run `/web-design-guidelines` + `/react-best-practices` + `/composition-patterns` on `BidEntry.jsx`, `PlayingScreen.jsx`, `ResultsEntry.jsx`
 - **Multi-device sessions** — each player connects on their own phone to view status and submit bids; major architecture pivot, very future
 - **3 of Spades rules** — scoring, round structure, and game loop to be defined and implemented
 - **Board game support** — free-form entry scoring model; specific games TBD
