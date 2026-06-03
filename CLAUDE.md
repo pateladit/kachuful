@@ -366,7 +366,17 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
     - `font-variant-numeric: tabular-nums` on all score/count numbers
     - `translate="no"` on brand and game names
 
-- **Session 24** — StatsModal player stats: table → metric cards grid:
+- **Session 24** — ResultsEntry `/frontend-design` pass + StatsModal metric cards grid:
+  - **`/frontend-design` Q&A pass on `ResultsEntry.jsx`** — 4 questions revealed the core issue: the screen's focus should be entering results + watching standings update, not the trump/cards/tricks hero display. Changes made:
+    - **Compact info bar** replaces 3 hero cards (~150px) — single horizontal band (~64px): trump glyph + name + flavor label · cards count · bid sum · live tricks tracker with progress bar + status label. Reference info visible without dominating.
+    - **Header simplified** — leaderboard chips removed (redundant with Standings below). Header now: brand | timer + action buttons | AccountMenu only.
+    - **Player tiles** → `minmax(160px, 1fr)` — 2-col on phones, 30px number pad buttons, tighter padding. Fits all players at a glance without scrolling.
+    - **Rotating highlight card removed** — replaced with a compact single-line highlight strip: `★ MVP Adit +21 · ○ Nil Priya held · ≈ Close Raj one over`. All 3 categories visible simultaneously; strip hidden when no results entered yet.
+    - **Standings takes full width** — now the visual star of the lower section; gets a proper `<h2>` heading + more breathing room per player row.
+    - Removed: `mvpCardIdx` state, `MVP_CARDS` constant, rotating card section.
+    - **Design principle**: ResultsEntry primary purpose = data entry (player tiles) + drama (standings updating live). Trump/cards info is reference, not the focus.
+
+- **Session 24 (earlier)** — StatsModal player stats: table → metric cards grid:
   - **Replaced horizontal-scroll table with responsive metric cards grid** — 12 cards, each card = one stat dimension, all players ranked within it.
   - **Motivation**: the wide 15-column table was too congested on mobile (phone opened at the table). Cards grid solves this: 1 column on phones (<540px), 2 on tablet, 3 on desktop — readable at any screen width.
   - **12 metric cards**: Accuracy, Nil Mastery, Small Rounds (1–4c), Large Rounds (5+c), Dealer Accuracy, Win Streak 🔥, Lose Streak 🧊, Best Round, Risk Appetite, Bid Drift, Close Calls, Best Trump.
@@ -530,7 +540,7 @@ Design intent captured before the `/frontend-design` pass on `BidEntry`, `Playin
 |--------|--------|-------|
 | `BidEntry.jsx` | ⚠ Needs `/frontend-design` pass | Felt Table aesthetic applied manually Session 20 — still needs the proper skill pass for a formal aesthetic review + any missed opportunities. |
 | `PlayingScreen.jsx` | ✓ Done Session 21 | Felt Table applied (suit-bleed, lattice, watermark, flavor label, player-color bids, live-dot running tab row, WinStreakCard + LoseStreakCard). Full audit pass done. |
-| `ResultsEntry.jsx` | ✓ Done Session 22 | Felt Table applied (suit-bleed, lattice, watermark, flavor label). Running tab sidebar added. Rotating highlight card (Top Scorer / Nil Achiever / Closest Call) with prev/next. leaderIds Set for ties. Sticky lime CTA footer. |
+| `ResultsEntry.jsx` | ✓ Done Session 24 | Felt Table (suit-bleed, lattice, watermark, flavor label) from Session 22. Session 24 `/frontend-design` pass: 3 hero cards → compact info bar; header chips removed; player tiles 2-col mobile (minmax 160px); rotating highlight card → compact 1-line strip (MVP · nil · closest); Standings full width as primary section. |
 | `StatsModal.jsx` | ✓ Done Session 24 | Hero cards strip + score progression chart (unchanged). Player stats: 12 metric cards grid (1 col phone / 2 col tablet / 3 col desktop) — each card is one stat, all players ranked. Replaces wide 15-column horizontal table which was too congested on mobile. Honorary titles end-game only. Design rule: all players visible at once per dimension, no tabs. |
 | `SummaryModal.jsx` | ⚠ Needs `/frontend-design` pass | Game Summary overlay; purpose discussion + redesign needed. |
 
@@ -553,9 +563,9 @@ The preview browser (`preview_start` / `preview_screenshot`) has no Supabase ses
 - **Offline support** — defer; internet connection assumed for now
 - **Session 25 next steps** (in order):
   1. `/frontend-design` pass on `SummaryModal.jsx` — overlay purpose discussion + redesign
-  2. Run `/web-design-guidelines` + `/react-best-practices` audit on `StatsModal.jsx`
+  2. Run `/web-design-guidelines` + `/react-best-practices` audit on `ResultsEntry.jsx` + `StatsModal.jsx`
   3. Extract shared `RunningTab` + `GameHeader` components (composition cleanup)
-  4. Run `/web-design-guidelines` + `/react-best-practices` + `/composition-patterns` audit on each remaining screen
+  4. Run `/web-design-guidelines` + `/react-best-practices` + `/composition-patterns` audit on remaining screens
 - **Multi-device sessions** — each player connects on their own phone to view status and submit bids; major architecture pivot, very future
 - **3 of Spades rules** — scoring, round structure, and game loop to be defined and implemented
 - **Board game support** — free-form entry scoring model; specific games TBD

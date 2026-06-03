@@ -21,14 +21,7 @@ const V = {
   accent3: 'var(--color-accent-3, #a8c068)',
 }
 
-// Diamond lattice — same 2% texture used on login, history, BidEntry, PlayingScreen
 const LATTICE_SVG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Cpath d='M18 0 L36 18 L18 36 L0 18 Z' fill='none' stroke='white' stroke-width='0.6'/%3E%3C/svg%3E")`
-
-const MVP_CARDS = [
-  { id: 'top',   label: '★ Round MVP',    accent: V.accent  },
-  { id: 'nil',   label: '○ Nil Achiever', accent: V.accent3 },
-  { id: 'close', label: '≈ Closest Call', accent: V.accent2 },
-]
 
 function formatRank(rk) {
   if (!rk) return '—'
@@ -59,7 +52,6 @@ export default function ResultsEntry({
   const [saving, setSaving]       = useState(false)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [statsOpen, setStatsOpen] = useState(false)
-  const [mvpCardIdx, setMvpCardIdx] = useState(0)
   const flashTimerRef = useRef({})
 
   useEffect(() => () => {
@@ -134,7 +126,6 @@ export default function ResultsEntry({
     return new Set(players.filter(p => totalsAfter[p.id] === maxScore).map(p => p.id))
   }, [players, totalsAfter])
 
-  // ─── MVP categories ───────────────────────────────────────────────────────
   const topScorers = useMemo(() => {
     const withResults = players.filter(p => took[p.id] !== undefined)
     if (!withResults.length) return []
@@ -184,16 +175,16 @@ export default function ResultsEntry({
     try { await endGame() } catch (_) {}
   }, [endGame])
 
+  const hasHighlights = topScorers.length > 0 || nilAchievers.length > 0 || nilPending > 0 || closestCalls.length > 0
+
   return (
     <>
-      {/* ─── Page wrapper: suit-bleed background + diamond lattice ─── */}
       <div style={{ minHeight: '100vh', background: tint.pageBleed, transition: 'background 0.9s ease', position: 'relative' }}>
 
         {/* Diamond lattice overlay */}
         <div aria-hidden style={{ position: 'fixed', inset: 0, backgroundImage: LATTICE_SVG, backgroundSize: '36px 36px', opacity: 0.022, pointerEvents: 'none', zIndex: 0 }} />
 
-        {/* Content layer */}
-        <div style={{ position: 'relative', zIndex: 1, maxWidth: 1360, margin: '0 auto', padding: '24px 32px 32px', display: 'grid', gridTemplateRows: 'auto auto auto auto auto', gap: 20 }}>
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 1360, margin: '0 auto', padding: '24px 32px 32px', display: 'grid', gridTemplateRows: 'auto auto auto auto auto auto', gap: 18 }}>
 
           {/* ─── Header ─── */}
           <header style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 20, paddingBottom: 14, borderBottom: `1px solid ${V.line}` }}>
@@ -236,96 +227,81 @@ export default function ResultsEntry({
               </button>
             </div>
 
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-              {sortedAfter.slice(0, 3).map((p, i) => (
-                <div
-                  key={p.id}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                    background: leaderIds.has(p.id) ? `color-mix(in oklab, ${V.accent} 16%, ${V.bg2})` : V.bg2,
-                    border: leaderIds.has(p.id) ? `1.5px solid color-mix(in oklab, ${V.accent} 60%, transparent)` : `1px solid ${V.line}`,
-                    borderLeft: `3px solid ${p.color}`,
-                    padding: '5px 10px 5px 8px', borderRadius: 999,
-                    fontFamily: 'var(--font-mono)', fontSize: 11, color: V.ink2,
-                  }}
-                >
-                  <Avatar player={p} size={18} />
-                  <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 12, color: V.ink }}>{p.displayName}</span>
-                  <b style={{ color: leaderIds.has(p.id) ? V.accent : V.ink, fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>{totalsAfter[p.id]}</b>
-                </div>
-              ))}
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <AccountMenu />
             </div>
           </header>
 
-          {/* ─── Hero cards ─── */}
-          <section aria-label="Round overview" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1.2fr', gap: 14 }}>
-
-            {/* Trump card — Felt Table tint treatment */}
-            <div style={{ background: tint.bg, border: tint.border, borderRadius: 20, padding: '20px 24px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 20, position: 'relative', overflow: 'hidden' }}>
-              <div aria-hidden style={{ position: 'absolute', right: -10, top: '50%', transform: 'translateY(-50%)', fontSize: 130, lineHeight: 1, color: tint.glyphColor, opacity: 0.09, pointerEvents: 'none', userSelect: 'none' }}>
-                {trump?.glyph ?? '⚬'}
-              </div>
-              <div style={{ fontSize: 72, lineHeight: 1, color: tint.glyphColor, flexShrink: 0 }}>{trump?.glyph ?? '⚬'}</div>
-              <div style={{ position: 'relative' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.16em', textTransform: 'uppercase', color: tint.labelColor }}>
-                  {trump?.nt ? `No Trump · Round ${roundNumber}` : `Trump · Round ${roundNumber}`}
+          {/* ─── Compact info bar (trump · cards · tricks tracker) ─── */}
+          <div
+            aria-label="Round info"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 0,
+              background: `color-mix(in oklab, ${tint.bg} 55%, ${V.bg2})`,
+              border: tint.border,
+              borderRadius: 16, overflow: 'hidden',
+            }}
+          >
+            {/* Trump */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', flexShrink: 0 }}>
+              <span aria-hidden style={{ fontSize: 32, color: tint.glyphColor, lineHeight: 1 }}>{trump?.glyph ?? '⚬'}</span>
+              <div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: tint.labelColor }}>
+                  {trump?.nt ? 'No Trump' : 'Trump'}
                 </div>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 44, letterSpacing: '-0.02em', color: tint.glyphColor, marginTop: 2 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: tint.glyphColor, letterSpacing: '-0.01em' }}>
                   {trump?.name ?? '—'}
+                  {tint.flavor ? <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: tint.labelColor, opacity: 0.7, fontWeight: 500, marginLeft: 8 }}>{tint.flavor}</span> : null}
                 </div>
-                {tint.flavor ? (
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.08em', color: tint.labelColor, marginTop: 4, opacity: 0.8 }}>
-                    {tint.flavor}
-                  </div>
-                ) : null}
               </div>
             </div>
 
-            {/* Cards this round */}
-            <div style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 20, padding: '20px 24px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted }}>Cards this round</div>
-              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 52, letterSpacing: '-0.02em', lineHeight: 1, color: V.ink, marginTop: 6, display: 'flex', alignItems: 'baseline', gap: 10, fontVariantNumeric: 'tabular-nums' }}>
+            <div aria-hidden style={{ width: 1, alignSelf: 'stretch', background: V.line, flexShrink: 0 }} />
+
+            {/* Cards count */}
+            <div style={{ padding: '12px 20px', flexShrink: 0 }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted }}>Cards</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24, color: V.ink, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>
                 {cards}
-                <small style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: V.muted, fontWeight: 500, letterSpacing: '.1em' }}>{cards === 1 ? 'CARD' : 'CARDS'} EACH</small>
-              </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.ink2, marginTop: 8 }}>
-                {bidSum} of {cards} tricks called · someone was off
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted, marginLeft: 5, fontWeight: 500, letterSpacing: '.08em' }}>EACH</span>
               </div>
             </div>
 
-            {/* Tricks taken tracker */}
-            <div style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 20, padding: '20px 24px' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted }}>Tricks taken</div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 6 }}>
-                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 52, letterSpacing: '-0.02em', color: V.ink, fontVariantNumeric: 'tabular-nums' }}>{sumOfTricks}</span>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: V.muted, fontWeight: 600 }}>/ <b style={{ color: V.ink }}>{cards}</b></span>
+            <div aria-hidden style={{ width: 1, alignSelf: 'stretch', background: V.line, flexShrink: 0 }} />
+
+            {/* Bid sum */}
+            <div style={{ padding: '12px 20px', flexShrink: 0 }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted }}>Bid sum</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24, color: V.ink2, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>
+                {bidSum}<span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted, marginLeft: 2, fontWeight: 500 }}>/{cards}</span>
               </div>
-              <div style={{ height: 8, background: V.bg2, borderRadius: 999, marginTop: 12, position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', inset: 0, width: `${Math.min(100, cards > 0 ? (sumOfTricks / cards) * 100 : 0)}%`, background: sumStatus === 'over' ? V.accent2 : sumStatus === 'exact' ? V.accent3 : V.accent, borderRadius: 999, transition: 'width .25s ease' }} />
+            </div>
+
+            <div aria-hidden style={{ width: 1, alignSelf: 'stretch', background: V.line, flexShrink: 0 }} />
+
+            {/* Tricks tracker — takes remaining space */}
+            <div style={{ flex: 1, padding: '12px 20px', minWidth: 140 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted }}>Tricks taken</div>
+                <div aria-live="polite" style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: sumStatus === 'exact' ? V.accent3 : sumStatus === 'over' ? V.accent2 : V.ink2, fontVariantNumeric: 'tabular-nums' }}>
+                  {sumOfTricks} / {cards}
+                  {sumStatus === 'exact' ? <span style={{ marginLeft: 4 }}>✓</span> : sumStatus === 'over' ? <span style={{ marginLeft: 4 }}>▲</span> : null}
+                </div>
               </div>
-              <div
-                aria-live="polite"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10,
-                  fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase',
-                  padding: '6px 12px', borderRadius: 999,
-                  background: sumStatus === 'over' ? `color-mix(in oklab, ${V.accent2} 22%, transparent)` : sumStatus === 'exact' ? `color-mix(in oklab, ${V.accent3} 22%, transparent)` : V.bg2,
-                  color: sumStatus === 'over' ? V.accent2 : sumStatus === 'exact' ? V.accent3 : V.ink2,
-                  border: `1px solid ${sumStatus === 'over' ? `color-mix(in oklab, ${V.accent2} 50%, transparent)` : sumStatus === 'exact' ? `color-mix(in oklab, ${V.accent3} 50%, transparent)` : V.line}`,
-                }}
-              >
-                <span aria-hidden>{sumStatus === 'exact' ? '✓' : sumStatus === 'over' ? '▲' : '○'}</span>
+              <div style={{ height: 6, background: V.bg2, borderRadius: 999, overflow: 'hidden', marginBottom: 4 }}>
+                <div style={{ width: `${Math.min(100, cards > 0 ? (sumOfTricks / cards) * 100 : 0)}%`, height: '100%', background: sumStatus === 'over' ? V.accent2 : sumStatus === 'exact' ? V.accent3 : V.accent, borderRadius: 999, transition: 'width .25s ease' }} />
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', color: sumStatus === 'over' ? V.accent2 : sumStatus === 'exact' ? V.accent3 : V.muted }}>
                 {sumLabel}
               </div>
             </div>
-          </section>
+          </div>
 
           {/* ─── Main content: player entry + running tab sidebar ─── */}
           <div className="game-content">
 
             {/* Player entry grid */}
-            <section aria-label="Tricks taken entry" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <section aria-label="Tricks taken entry" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 16, color: V.ink, margin: 0 }}>
                   Tricks taken
@@ -338,7 +314,7 @@ export default function ResultsEntry({
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 8 }}>
                 {players.map((p, i) => {
                   const bid      = pendingRound?.bids[p.id] ?? 0
                   const taken    = took[p.id]
@@ -360,37 +336,36 @@ export default function ResultsEntry({
                           ? `1px solid ${made ? `color-mix(in oklab, ${V.accent3} 50%, transparent)` : `color-mix(in oklab, ${V.accent2} 50%, transparent)`}`
                           : `1px solid ${V.line}`,
                         borderLeft: `4px solid ${p.color}`,
-                        borderRadius: 14, padding: '14px 16px', position: 'relative',
+                        borderRadius: 12, padding: '10px 12px', position: 'relative',
                         transition: 'background .25s ease, border-color .25s ease',
                       }}
                     >
-                      {/* Player identity + bid target */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                        <Avatar player={p} size={30} isDealer={isDealer} />
+                      {/* Player identity + bid */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                        <Avatar player={p} size={26} isDealer={isDealer} />
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, color: V.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13, color: V.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {p.displayName}
                           </div>
                           {isDealer ? (
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', color: V.accent, fontWeight: 700 }}>DEALER</div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 8, letterSpacing: '.12em', textTransform: 'uppercase', color: V.accent, fontWeight: 700 }}>DEALER</div>
                           ) : null}
                         </div>
-                        {/* Bid target in player's color */}
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 28, color: bid === 0 ? V.accent3 : p.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+                          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24, color: bid === 0 ? V.accent3 : p.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
                             {bid}
                           </div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: V.muted, textTransform: 'uppercase', letterSpacing: '.1em' }}>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 7, color: V.muted, textTransform: 'uppercase', letterSpacing: '.1em' }}>
                             {bid === 0 ? 'NIL' : 'BID'}
                           </div>
                         </div>
                       </div>
 
-                      {/* Number pad + quick-fill */}
+                      {/* Number pad */}
                       <div
                         role="group"
                         aria-label={`Tricks taken for ${p.displayName}`}
-                        style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}
+                        style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 8 }}
                         onClick={e => e.stopPropagation()}
                       >
                         {Array.from({ length: cards + 1 }, (_, n) => {
@@ -403,7 +378,7 @@ export default function ResultsEntry({
                               aria-label={`${n} trick${n !== 1 ? 's' : ''}${isBid ? ' — bid target' : ''}`}
                               aria-pressed={isSelected}
                               style={{
-                                width: 34, height: 34, borderRadius: 8,
+                                width: 30, height: 30, borderRadius: 7,
                                 border: isSelected
                                   ? `2px solid ${made ? V.accent3 : V.accent2}`
                                   : isBid
@@ -417,7 +392,7 @@ export default function ResultsEntry({
                                 color: isSelected ? (made ? V.accent3 : V.accent2) : isBid ? p.color : V.ink,
                                 fontFamily: 'var(--font-mono)',
                                 fontWeight: isSelected || isBid ? 700 : 500,
-                                fontSize: 14, cursor: 'pointer',
+                                fontSize: 13, cursor: 'pointer',
                                 touchAction: 'manipulation',
                                 transition: 'background .15s ease, border-color .15s ease',
                                 fontVariantNumeric: 'tabular-nums',
@@ -431,11 +406,11 @@ export default function ResultsEntry({
                           onClick={() => setPlayerTook(p.id, bid)}
                           aria-label={`Mark ${p.displayName} as made their bid of ${bid}`}
                           style={{
-                            height: 34, borderRadius: 8, padding: '0 10px',
+                            height: 30, borderRadius: 7, padding: '0 8px',
                             background: made ? `color-mix(in oklab, ${V.accent3} 22%, ${V.surface})` : `color-mix(in oklab, ${V.accent3} 12%, ${V.surface})`,
                             border: `1.5px solid color-mix(in oklab, ${V.accent3} ${made ? 60 : 35}%, transparent)`,
                             color: V.accent3,
-                            fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700,
+                            fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700,
                             letterSpacing: '.08em', textTransform: 'uppercase',
                             cursor: 'pointer', whiteSpace: 'nowrap', touchAction: 'manipulation',
                           }}
@@ -444,16 +419,16 @@ export default function ResultsEntry({
                         </button>
                       </div>
 
-                      {/* Status + earned points */}
+                      {/* Status + earned */}
                       <div style={{
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        paddingTop: 10,
+                        paddingTop: 8,
                         borderTop: `1px solid ${isSet ? (made ? `color-mix(in oklab, ${V.accent3} 25%, transparent)` : `color-mix(in oklab, ${V.accent2} 25%, transparent)`) : V.line}`,
                       }}>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700, color: isSet ? (made ? V.accent3 : V.accent2) : V.muted }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700, color: isSet ? (made ? V.accent3 : V.accent2) : V.muted }}>
                           {isSet ? (made ? '● MADE' : '● MISSED') : '● PENDING'}
                         </span>
-                        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: isSet ? (made ? V.accent3 : V.accent2) : V.muted, fontVariantNumeric: 'tabular-nums' }}>
+                        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: isSet ? (made ? V.accent3 : V.accent2) : V.muted, fontVariantNumeric: 'tabular-nums' }}>
                           {isSet ? (made ? <><span>+</span><AnimatedScore value={earned} className="score-pop" /></> : '0') : '—'}
                         </span>
                       </div>
@@ -463,7 +438,7 @@ export default function ResultsEntry({
               </div>
             </section>
 
-            {/* Running tab — right sidebar on desktop, below on mobile */}
+            {/* Running tab sidebar */}
             <section className="game-tab-sidebar" aria-label="Running score tab" style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 20, overflow: 'hidden' }}>
 
               <div style={{ padding: '14px 18px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
@@ -538,7 +513,7 @@ export default function ResultsEntry({
                       )
                     })}
 
-                    {/* Current round — results being entered live */}
+                    {/* Current round — live results */}
                     <tr>
                       <td
                         className="game-tab-round-cell"
@@ -623,206 +598,121 @@ export default function ResultsEntry({
             </section>
           </div>
 
-          {/* ─── Rotating highlight card + Standings ─── */}
-          <section style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: 14 }}>
+          {/* ─── Highlight strip (compact, secondary) ─── */}
+          {hasHighlights ? (
+            <div
+              aria-label="Round highlights"
+              style={{
+                display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8,
+                padding: '10px 16px',
+                background: V.bg2, border: `1px solid ${V.line}`, borderRadius: 12,
+              }}
+            >
+              {topScorers.length > 0 ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+                  <span aria-hidden style={{ color: V.accent }}>★ MVP</span>
+                  <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 12, color: topScorers.length === 1 ? topScorers[0].player.color : V.ink }}>
+                    {topScorers.length === 1 ? topScorers[0].player.displayName : `${topScorers.length}-way tie`}
+                  </span>
+                  <span style={{ fontWeight: 700, color: V.accent3 }}>+{topScorers[0].pts}</span>
+                </span>
+              ) : null}
 
-            {/* ── Rotating MVP / Nil / Closest-Call card ── */}
-            {(() => {
-              const catAccent = MVP_CARDS[mvpCardIdx].accent
-              const topSingle = mvpCardIdx === 0 && topScorers.length === 1 ? topScorers[0].player.color : null
-              const hasData   = mvpCardIdx === 0 ? topScorers.length > 0
-                              : mvpCardIdx === 1 ? nilAchievers.length > 0
-                              : closestCalls.length > 0
-              const cardBg     = topSingle
-                ? `color-mix(in oklab, ${topSingle} 12%, ${V.surface})`
-                : hasData
-                  ? `color-mix(in oklab, ${catAccent} 8%, ${V.surface})`
-                  : V.surface
-              const cardBorder = topSingle
-                ? `1px solid color-mix(in oklab, ${topSingle} 45%, transparent)`
-                : hasData
-                  ? `1px solid color-mix(in oklab, ${catAccent} 40%, transparent)`
-                  : `1px solid ${V.line}`
-              const cardLeftBar = topSingle ?? catAccent
+              {topScorers.length > 0 && (nilAchievers.length > 0 || nilPending > 0 || closestCalls.length > 0) ? (
+                <span aria-hidden style={{ color: V.line, fontFamily: 'var(--font-mono)', fontSize: 14 }}>·</span>
+              ) : null}
 
-              return (
-                <div style={{ background: cardBg, border: cardBorder, borderLeft: `4px solid ${cardLeftBar}`, borderRadius: 20, padding: '20px 22px', display: 'flex', flexDirection: 'column', transition: 'background .3s ease, border-color .3s ease' }}>
+              {nilAchievers.length > 0 ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+                  <span aria-hidden style={{ color: V.accent3 }}>○ Nil</span>
+                  <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 12, color: V.ink }}>
+                    {nilAchievers.map(p => p.displayName).join(', ')}
+                  </span>
+                  <span style={{ color: V.muted }}>held</span>
+                </span>
+              ) : nilPending > 0 ? (
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.muted }}>
+                  ○ {nilPending} nil bid{nilPending > 1 ? 's' : ''} in play
+                </span>
+              ) : null}
 
-                  {/* Category label */}
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: catAccent, marginBottom: 14 }}>
-                    {MVP_CARDS[mvpCardIdx].label}
-                  </div>
+              {(nilAchievers.length > 0 || nilPending > 0) && closestCalls.length > 0 ? (
+                <span aria-hidden style={{ color: V.line, fontFamily: 'var(--font-mono)', fontSize: 14 }}>·</span>
+              ) : null}
 
-                  {/* Card content — keyed so fade fires on every switch */}
-                  <div key={mvpCardIdx} className="mvp-card-in" style={{ flex: 1, minHeight: 110 }}>
+              {closestCalls.length > 0 ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+                  <span aria-hidden style={{ color: V.accent2 }}>≈ Close</span>
+                  <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 12, color: V.ink }}>
+                    {closestCalls.map(c => c.player.displayName).join(', ')}
+                  </span>
+                  <span style={{ color: V.muted }}>
+                    {closestCalls.length === 1
+                      ? (closestCalls[0].delta > 0 ? 'one over' : 'one short')
+                      : 'missed by 1'}
+                  </span>
+                </span>
+              ) : null}
+            </div>
+          ) : null}
 
-                    {/* ─ Top Scorer ─ */}
-                    {mvpCardIdx === 0 && (
-                      topScorers.length === 0 ? (
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.muted }}>No results entered yet</div>
-                      ) : topScorers.length === 1 ? (
-                        <>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                            <Avatar player={topScorers[0].player} size={44} />
-                            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: V.ink }}>{topScorers[0].player.displayName}</div>
-                          </div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.ink2, marginBottom: 8 }}>
-                            Bid <b style={{ color: V.ink }}>{topScorers[0].bid}</b> · took <b style={{ color: V.ink }}>{topScorers[0].took}</b>
-                          </div>
-                          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 40, letterSpacing: '-0.02em', color: topScorers[0].player.color, fontVariantNumeric: 'tabular-nums' }}>
-                            +<AnimatedScore value={topScorers[0].pts} className="score-pop" />
-                            <small style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, letterSpacing: '.12em', color: V.muted, marginLeft: 8 }}>PTS</small>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-                            {topScorers.map(s => <Avatar key={s.player.id} player={s.player} size={36} />)}
-                          </div>
-                          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15, color: V.ink, marginBottom: 4, lineHeight: 1.3 }}>
-                            {topScorers.map(s => s.player.displayName).join(' · ')}
-                          </div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.ink2, marginBottom: 8 }}>
-                            {topScorers.length}-way tie
-                          </div>
-                          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 36, letterSpacing: '-0.02em', color: V.accent, fontVariantNumeric: 'tabular-nums' }}>
-                            +{topScorers[0].pts}
-                            <small style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, letterSpacing: '.12em', color: V.muted, marginLeft: 8 }}>PTS EACH</small>
-                          </div>
-                        </>
-                      )
-                    )}
-
-                    {/* ─ Nil Achiever ─ */}
-                    {mvpCardIdx === 1 && (
-                      nilAchievers.length === 0 && nilPending === 0 ? (
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.muted }}>No nil bids this round</div>
-                      ) : nilAchievers.length === 0 ? (
-                        <>
-                          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 16, color: V.ink, marginBottom: 6 }}>
-                            {nilPending} nil bid{nilPending > 1 ? 's' : ''} in play
-                          </div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.muted }}>Results pending…</div>
-                        </>
-                      ) : (
-                        <>
-                          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                            {nilAchievers.map(p => <Avatar key={p.id} player={p} size={nilAchievers.length === 1 ? 44 : 36} />)}
-                          </div>
-                          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: nilAchievers.length === 1 ? 20 : 15, color: V.ink, marginBottom: 4, lineHeight: 1.3 }}>
-                            {nilAchievers.map(p => p.displayName).join(' · ')}
-                          </div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.ink2, marginBottom: 8 }}>
-                            {nilAchievers.length === 1 ? 'Called zero · held zero' : `All ${nilAchievers.length} bid zero · all held`}
-                          </div>
-                          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 36, letterSpacing: '-0.02em', color: V.accent3, fontVariantNumeric: 'tabular-nums' }}>
-                            +{scoreFor(0, 0, variant)}
-                            <small style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, letterSpacing: '.12em', color: V.muted, marginLeft: 8 }}>
-                              PTS{nilAchievers.length > 1 ? ' EACH' : ''}
-                            </small>
-                          </div>
-                        </>
-                      )
-                    )}
-
-                    {/* ─ Closest Call ─ */}
-                    {mvpCardIdx === 2 && (
-                      closestCalls.length === 0 ? (
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.muted }}>
-                          {entered === 0 ? 'No results entered yet' : 'No one missed by exactly 1 trick (yet)'}
-                        </div>
-                      ) : closestCalls.length === 1 ? (
-                        <>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                            <Avatar player={closestCalls[0].player} size={44} />
-                            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: V.ink }}>{closestCalls[0].player.displayName}</div>
-                          </div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.ink2, marginBottom: 8 }}>
-                            Bid <b style={{ color: V.ink }}>{closestCalls[0].bid}</b> · took <b style={{ color: V.ink }}>{closestCalls[0].took}</b> · {closestCalls[0].delta > 0 ? 'one over' : 'one short'}
-                          </div>
-                          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 36, letterSpacing: '-0.02em', color: V.accent2 }}>
-                            0 <small style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, letterSpacing: '.12em', color: V.muted }}>PTS · SO CLOSE</small>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-                            {closestCalls.map(c => <Avatar key={c.player.id} player={c.player} size={36} />)}
-                          </div>
-                          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15, color: V.ink, marginBottom: 4, lineHeight: 1.3 }}>
-                            {closestCalls.map(c => c.player.displayName).join(' · ')}
-                          </div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.ink2 }}>All missed by exactly 1 trick</div>
-                        </>
-                      )
-                    )}
-
-                  </div>
-
-                  {/* Prev / dot indicators / Next */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, paddingTop: 12, borderTop: `1px solid ${V.line}` }}>
-                    <button
-                      onClick={() => setMvpCardIdx(i => (i - 1 + 3) % 3)}
-                      aria-label="Previous highlight"
-                      style={{ background: 'transparent', border: `1px solid ${V.line}`, color: V.ink2, fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.1em', padding: '5px 10px', borderRadius: 8, cursor: 'pointer', touchAction: 'manipulation' }}
-                    >← Prev</button>
-                    <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
-                      {MVP_CARDS.map((card, i) => (
-                        <button
-                          key={card.id}
-                          onClick={() => setMvpCardIdx(i)}
-                          aria-label={`Show ${card.label}`}
-                          aria-pressed={i === mvpCardIdx}
-                          style={{ width: 7, height: 7, borderRadius: '50%', background: i === mvpCardIdx ? catAccent : V.line, border: 'none', padding: 0, cursor: 'pointer', touchAction: 'manipulation', transition: 'background .2s ease' }}
-                        />
-                      ))}
-                    </div>
-                    <button
-                      onClick={() => setMvpCardIdx(i => (i + 1) % 3)}
-                      aria-label="Next highlight"
-                      style={{ background: 'transparent', border: `1px solid ${V.line}`, color: V.ink2, fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.1em', padding: '5px 10px', borderRadius: 8, cursor: 'pointer', touchAction: 'manipulation' }}
-                    >Next →</button>
-                  </div>
-                </div>
-              )
-            })()}
-
-            <div style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 20, padding: '22px 24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 18, color: V.ink }}>Standings · after this round</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: allValid ? V.accent3 : V.muted }}>{allValid ? 'Final ✓' : 'Live · updating'}</div>
+          {/* ─── Standings — full width, primary section ─── */}
+          <section aria-label="Standings after this round" style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 20, padding: '22px 24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, letterSpacing: '-0.01em', color: V.ink, margin: 0 }}>
+                Standings
+                <small style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, letterSpacing: '.12em', textTransform: 'uppercase', marginLeft: 10, fontWeight: 500 }}>after this round</small>
+              </h2>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: allValid ? V.accent3 : V.muted }}>
+                {allValid ? 'Final ✓' : 'Live · updating'}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {sortedAfter.map(p => {
-                  const rkBefore = ranksBefore[p.id]?.rank ?? 0
-                  const rkAfter  = ranksAfter[p.id]?.rank ?? 0
-                  const delta    = rkBefore - rkAfter
-                  const gain     = totalsAfter[p.id] - totalsBefore[p.id]
-                  const isLeader = leaderIds.has(p.id)
-                  return (
-                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: rankBg(ranksAfter[p.id]?.rank, sortedAfter.length), border: `1px solid ${V.line}`, borderLeft: `3px solid ${p.color}`, borderRadius: 10, padding: '8px 12px' }}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: isLeader ? V.accent : V.muted, width: 28 }}>
-                        {formatRank(ranksAfter[p.id])}
-                      </div>
-                      <Avatar player={p} size={26} />
-                      <div style={{ flex: 1, fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, color: V.ink }}>{p.displayName}</div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: isLeader ? V.accent : V.ink, fontVariantNumeric: 'tabular-nums' }}>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {sortedAfter.map(p => {
+                const rkBefore = ranksBefore[p.id]?.rank ?? 0
+                const rkAfter  = ranksAfter[p.id]?.rank ?? 0
+                const delta    = rkBefore - rkAfter
+                const gain     = totalsAfter[p.id] - totalsBefore[p.id]
+                const isLeader = leaderIds.has(p.id)
+                return (
+                  <div
+                    key={p.id}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      background: rankBg(ranksAfter[p.id]?.rank, sortedAfter.length),
+                      border: `1px solid ${V.line}`,
+                      borderLeft: `4px solid ${p.color}`,
+                      borderRadius: 12, padding: '10px 14px',
+                    }}
+                  >
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: isLeader ? V.accent : V.muted, width: 30, flexShrink: 0 }}>
+                      {formatRank(ranksAfter[p.id])}
+                    </div>
+                    <Avatar player={p} size={28} />
+                    <div style={{ flex: 1, fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15, color: V.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {p.displayName}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexShrink: 0 }}>
+                      <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: isLeader ? V.accent : V.ink, fontVariantNumeric: 'tabular-nums' }}>
                         <AnimatedScore value={totalsAfter[p.id]} />
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, marginLeft: 4, color: gain === 0 ? V.muted : V.accent3, fontVariantNumeric: 'tabular-nums' }}>
-                          {gain > 0 ? `+${gain}` : gain === 0 ? '—' : gain}
-                        </span>
-                      </div>
-                      <div className={delta !== 0 ? 'rank-delta' : ''} style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: delta > 0 ? V.accent3 : delta < 0 ? V.accent2 : V.muted, width: 52, textAlign: 'right' }}>
-                        {delta > 0 ? `▲ ${delta}` : delta < 0 ? `▼ ${Math.abs(delta)}` : '— same'}
-                      </div>
+                      </span>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, color: gain === 0 ? V.muted : V.accent3, fontVariantNumeric: 'tabular-nums' }}>
+                        {gain > 0 ? `+${gain}` : gain === 0 ? '—' : gain}
+                      </span>
                     </div>
-                  )
-                })}
-              </div>
+                    <div
+                      className={delta !== 0 ? 'rank-delta' : ''}
+                      style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: delta > 0 ? V.accent3 : delta < 0 ? V.accent2 : V.muted, width: 54, textAlign: 'right', flexShrink: 0 }}
+                    >
+                      {delta > 0 ? `▲ ${delta}` : delta < 0 ? `▼ ${Math.abs(delta)}` : '— same'}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </section>
 
-          {/* ─── Footer — sticky at viewport bottom when allValid ─── */}
+          {/* ─── Footer ─── */}
           <footer style={{
             display: 'grid', gridTemplateColumns: '1fr auto', gap: 20, alignItems: 'center',
             paddingTop: 14, paddingBottom: 14,
