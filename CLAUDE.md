@@ -65,7 +65,6 @@ Leg 3+ (repeating): 2, …, peak_cards, peak_cards-1, …, 1
 - On the bid-entry screen there is a **skip** button to jump to a non-sequential
   card count for a round if needed; the actual `cards_dealt` stored per round is
   authoritative regardless of the computed sequence
-- The setup page displays the default loop as `start → peak → 1 (N rounds)` for reference
 - `peak_cards` defaults to `floor((52 × num_decks) / player_count)` but the
   scorekeeper can set a lower value on the setup screen
 
@@ -114,18 +113,13 @@ remains correct even if the scoring_variant is ever corrected on the game row.
 | `peak_cards` | int | Ka Chu Fu L: maximum cards per round |
 | `no_trump_round` | boolean | Ka Chu Fu L: whether NT suit is included in rotation |
 | `first_dealer_seat` | int | Ka Chu Fu L: seat_order of round-1 dealer (chosen via card-cut mechanic) |
+| `team_mode` | text nullable | `'none'` \| `'alternating'` \| `'custom'` — null means no teams |
 | `status` | text | `'in_progress'` or `'complete'` |
 | `started_at` | timestamptz | Set when game begins |
 | `ended_at` | timestamptz | Set when End Game is tapped |
 
 Ka Chu Fu L-specific columns (`scoring_variant` … `first_dealer_seat`) remain for backward compat.
 New game types store their config in `game_config` (JSONB).
-
-New columns planned for Free Form Entry support (migration: `supabase/add_freeform_game.sql`):
-
-| Column | Type | Notes |
-|--------|------|-------|
-| `team_mode` | text nullable | `'none'` \| `'alternating'` \| `'custom'` — null means no teams |
 
 ### game_players — key columns
 
@@ -136,8 +130,6 @@ New columns planned for Free Form Entry support (migration: `supabase/add_freefo
 | `color` | text | Hex from the 12-color palette (see Design System) |
 | `seat_order` | int | 0-based clockwise seat index |
 | `team` | smallint nullable | `1` or `2` for team assignment; null when `team_mode = 'none'` |
-
-`guest_name` column from earlier design is replaced by `display_name` universally.
 
 ### rounds — key columns
 
@@ -154,6 +146,7 @@ New columns planned for Free Form Entry support (migration: `supabase/add_freefo
 - Both functions use `SECURITY DEFINER` to avoid recursive RLS on `game_players`
 - Anonymous users are in the `authenticated` role — all policies apply to them identically
 - Members can SELECT; only the creator can INSERT / UPDATE / DELETE
+- `profiles` SELECT policy is own-row-only (tightened S12 — was all authenticated users)
 
 ## Design System
 
@@ -212,79 +205,7 @@ so classes like `bg-bg`, `text-ink`, `border-line` work throughout the app.
 | `/preferences` | `Preferences.jsx` | Theme toggle (Lantern/Mehfil); account upgrade for anonymous users |
 | `/admin` | `Admin.jsx` | All-games view; guarded by `profiles.is_admin = true` |
 
-Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>'` in Supabase SQL editor. Migration in `supabase/add_is_admin.sql`.
-
-## Completed Sessions
-
-- **Session 1** — Vite + React scaffold, Tailwind v4, Supabase client, folder structure, placeholder routes
-- **Session 2** — `supabase/schema.sql` with all tables, RLS policies, auth trigger
-- **Session 3** — `useAuth` hook + `AuthProvider`, `ProtectedRoute`, `LoginPage`
-- **Session 4** — Lantern theme foundation (fonts, CSS tokens), `src/lib/gameLogic.js`,
-  Google OAuth + anonymous auth, Login page restyle, full `Home.jsx` setup page
-  (player roster, color picker, scoring variant, rules/rounds config, cut-for-dealer,
-  Supabase INSERT on submit)
-- **Session 5** — `useGame` hook (Supabase data loader + phase state machine),
-  `Avatar`, `GameTimer`, `SummaryModal`, `BidEntry` components built from
-  `bid-entry.html` + `summary-modal.jsx` design handoffs; full `Game.jsx` phase
-  router (`loading → bidding → playing → complete`); Home.jsx RLS fix (first
-  player seat 0 gets `user_id = auth.uid()` so `is_game_member` returns true)
-- **Session 6** — `PlayingScreen` (locked bids grid, running tab, stat cards, chai
-  pause overlay), `ResultsEntry` (per-player number pad, flash animations, sum
-  validation, live rank deltas, MVP reveal, locks results to Supabase),
-  `FinalResults` page at `/game/:id/final` (standings table with medals/accuracy/
-  streaks, SVG score-progression line chart with hover tooltip, full running tab);
-  `Game.jsx` phase router wired end-to-end; `App.jsx` route added
-
-- **Session 7** — `useHistory` hook (deep Supabase query: games → game_players →
-  rounds → bids + round_results), full `History.jsx` rewrite: 4-stat summary row
-  (total games, win rate, best round score, accuracy — scoped to the user's own
-  seat across all games), game list with per-game player scores, winner, duration,
-  status badge; clicking any game navigates to `/game/:id/final` (complete) or
-  `/game/:id` (in progress)
-
-- **Post-session work** — responsive layout (two-column `Home.jsx` at ≥1024px,
-  wider `History.jsx`, overflow-x scroll on `FinalResults` standings table);
-  Mehfil light theme + `useTheme` hook; anonymous account upgrade flow (`Preferences.jsx`,
-  dismissible banner on `Home.jsx`); `isAdmin` support with `Admin.jsx` and
-  `supabase/add_is_admin.sql` migration; `AccountMenu` wired to Preferences/Admin;
-  `ResultsEntry` reverted to open-grid design (all players visible simultaneously)
-
-- **Session 8** — share, fanfare & rank colours: `canvas-confetti` + `html2canvas`
-  installed; `supabase/share_complete_games.sql` additive SELECT policies for complete
-  games (anyone authenticated can view `/game/:id/final`); `Game.jsx` — `GameOverSplash`
-  component fires confetti + shows winner, auto-navigates to FinalResults after 3 s;
-  `FinalResults.jsx` — confetti on load (< 10 min since end), winner hero card, top-3
-  podium (2nd | 1st | 3rd), share dropdown (copy link / Share via… / download PNG /
-  print PDF); rank conditional formatting (`rankBg` green→red by rank) applied to TOTAL
-  + RANK footer rows in `PlayingScreen`, `BidEntry` (new RANK row added), `ResultsEntry`
-  standings, and `FinalResults` RunningTab + standings table; `AccountMenu` added to
-  all 3 in-game screen headers; fixed missing `/` in BidEntry running tab bid/took subtext
-
-- **Session 9** — `StatsModal` component (`src/components/game/StatsModal.jsx`) with
-  5 sections: zero-bid performance (overall + ≤4/5+ card split), accuracy by card count
-  (per-count breakdown + 1–4/5+ grouped), dealer burden (times dealt + accuracy as dealer),
-  best streaks (made/missed), and fun stats (best single round, trump affinity, risk
-  appetite, bid drift); glossary for risk appetite and bid drift below fun stats section;
-  new stat functions in `gameLogic.js`: `nilBidStats`, `cardCountStats`, `dealerBurden`,
-  `bestRoundScore`, `favoriteTrump`, `avgBidRatio`, `netBidDrift`; `rankBg` added to
-  `SummaryModal` TOTAL/RANK rows (was missing); Stats button (⊞) wired into `BidEntry`,
-  `PlayingScreen`, `ResultsEntry`, `FinalResults`, and per-game-card in `History`;
-  `useHistory` updated to fetch `round_number, cards_dealt, trump_suit, dealer_id` so
-  rounds can be normalized to StatsModal format from the history page
-
-- **Session 10** — multi-game type infrastructure + ResultsEntry UX improvements:
-  - `supabase/add_multi_game_type.sql` migration: adds `game_type` (card/board),
-    `game_subtype` (kachufull/spades3/…), `game_config` (JSONB) to `games` table;
-    back-fills `game_config` for existing Ka Chu Fu L rows
-  - `Home.jsx` redesigned setup flow: **Game type** section (Card Game / Board Game toggle)
-    → **Select a game** grid (explicit selection required before config appears);
-    Ka Chu Fu L shows full scoring + rules + cut-for-dealer config; 3 of Spades shows
-    "rules coming soon" placeholder; board games show 3 dimmed "coming soon" tiles;
-    `canStart` gated to `kachufull` only until other games are implemented
-  - `games` INSERT now writes `game_type` + `game_subtype`
-  - `useHistory` + `History.jsx` fetch and display `game_subtype` badge on game cards
-  - `ResultsEntry` bid highlight on number pad (amber tint on the button matching the
-    player's bid) + "✓ Made" quick-fill button next to each player's bid value
+Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>'` in Supabase SQL editor.
 
 ## Supported Games
 
@@ -295,243 +216,28 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
 | `spades3` | card | Placeholder | 3 of Spades; rules/scoring not yet configured |
 | *(board games)* | board | Placeholder | Coming soon; free-form scoring model planned |
 
-- **Session 11** — branding + auth fixes:
-  - App renamed to **Ujagro**; tagline "Where every game night begins." / *જ્યાં રાત શરૂ થાય.*
-  - Login hero updated; nav headers across all pages (Home, History, Game, Admin, Preferences) updated to Ujagro; game-specific Ka·Chu·Fu·L labels left intact
-  - Google OAuth redirect fixed: Supabase Site URL + Redirect URLs updated to `https://kachuful-eight.vercel.app`
-  - `game_type` / `game_subtype` columns confirmed added via `add_multi_game_type.sql` migration (resolves "column does not exist" error on History page)
+## Build History (Sessions 1–26)
 
-- **Session 12** — security hardening + micro-animations + scheduled routines:
-  - **Security**: tightened `profiles` SELECT policy — was `authenticated` (all users could list all profiles + see `is_admin`); replaced with own-row-only via `supabase/tighten_profiles_policy.sql` migration
-  - **Micro-animations**:
-    - New `src/hooks/useCountUp.js` — `requestAnimationFrame` count-up with ease-out cubic; `duration` and `enabled` options
-    - `src/index.css` — 4 new keyframe animations: `ripple` (bid pad press), `avatar-pulse` (active player ring), `slide-in-right` (rank delta badge), `score-pop` (score reveal)
-    - `BidEntry.jsx` — bid pad buttons play `.bid-press` ripple on press; active-player avatar wrapped in `.avatar-pulse` ring
-    - `ResultsEntry.jsx` — `AnimatedScore` component using `useCountUp` on earned points, MVP score, and standings totals; rank delta badges use `.rank-delta` slide-in
-    - `PlayingScreen.jsx` — `AnimatedTotal` component animates TOTAL row in running tab using `useCountUp`
-  - **Scheduled routines** — 6 CCR remote agents created at `claude.ai/code/routines` (Supabase MCP + Gmail MCP):
-    1. **Prod health check** — daily 9 AM PT; queries Supabase for stuck in-progress games, anomalies; emails ptladit@gmail.com
-    2. **Stuck games cleanup** — daily 8 AM PT; flags games in-progress > 24 h with no recent rounds
-    3. **CLAUDE.md reminder** — weekly Monday 9 AM PT; reminds to update CLAUDE.md after sessions
-    4. **Dependency check** — weekly Monday 10 AM PT; checks for outdated npm packages
-    5. **Signup summary** — weekly Monday 9 AM PT; weekly new user signup counts from Supabase
-    6. **Anon nudge** — weekly Monday 9 AM PT; counts anonymous users with ≥2 games who haven't upgraded
-
-- **Session 13** — accessibility pass (web-design-guidelines audit):
-  - `aria-label` on all icon-only buttons: color swatches, ↑↓ reorder, × remove, cut-for-dealer cards, color picker swatches, Stepper −/+
-  - `aria-pressed` on game type toggle, deck selector (1/2), no-trump toggle, color picker swatches
-  - `role="radio"` + `aria-checked` on game selection and scoring variant buttons
-  - `aria-expanded` on color swatch trigger; `aria-live="polite"` on Stepper value display
-  - `focus-visible` rings on all inputs (`Login.jsx`, `Home.jsx`) and all icon buttons
-  - `autocomplete` + `name` attributes on all form inputs; `spellCheck={false}` on email; `htmlFor` wired to game name label
-  - `Stepper` component accepts `label` prop for descriptive aria-labels
-  - Placeholder text ends with `…` on guest name, game name, player name inputs
-  - `color-scheme: dark` on `<html>` — native scrollbars and selects adopt dark theme
-  - `<meta name="theme-color" content="#2a1620">` — mobile browser chrome matches app background
-
-- **Session 15** — Login redesign polish + History page redesign:
-  - **Login accessibility/perf fixes** (react-best-practices + web-design-guidelines audit):
-    - `rise`/`breathe` keyframes moved from inline `<style>` to `index.css`
-    - `CORNER_POSITIONS`, `inputStyle`, `toggleBtnStyle` hoisted to module level
-    - `Page` wrapped in `React.memo` — atmospheric decorations never re-render on state changes
-    - Brand `<div>` → `<h1>`; tagline → `<p>` with `text-wrap: balance`
-    - `{error && ...}` → `{error ? ... : null}` throughout
-    - `transition: all` removed from tab buttons → explicit CSS class properties
-    - `onMouseEnter/Leave` mutations replaced with CSS `:hover` classes
-    - `focus-visible` rings on all interactive elements via `login-*` CSS classes
-    - `touch-action: manipulation` on all buttons
-    - `outline: none` removed from inputs → `.login-input:focus` in CSS
-    - `htmlFor` wired on all Field labels
-    - `text-wrap: balance` on tagline and short headings
-  - **History page full redesign** — "The Scorebook":
-    - New Game as full-width hero `<Link>` with diamond lattice pattern
-    - Game collection strip: Ka·Chu·Fu·L with live play count; 3 of Spades + Board Games as "coming soon" tiles
-    - Compact game cards: winner color bar, avatar, name/score, meta row (name · players · duration · relative time)
-    - Tap-to-expand inline standings with medals, color dots, Stats + Full Results actions
-    - `expandedIds: Set<id>` — multiple cards expandable simultaneously
-    - Subtle 2% lattice background texture — consistent with login, not theatrical
-    - `timeAgo()` helper for relative timestamps
-    - Sticky header with Ujagro brand + AccountMenu
-  - **History react-best-practices + web-design-guidelines fixes**:
-    - `processGame` runs once per game via `useMemo(games.map(processGame), [games])` — eliminates double-call
-    - `GameCard` + `GameTile` wrapped in `React.memo`
-    - `toggleCard` stable via `useCallback([])` — memoization effective
-    - `LatticeBg` hoisted to memoized module-level component — never re-renders after mount
-    - `onNavigate` prop eliminated — `GameCard` uses `<Link>` directly
-    - `toSorted()` replaces spread+sort throughout `processGame`
-    - All `&&` JSX conditionals → explicit ternary with null
-    - Navigation actions use `<Link>` not `<button onClick={navigate}>`
-    - `<div role="button">` → semantic `<button>` on card toggle row
-    - `focus-visible` rings, `touch-action`, `aria-label`, `aria-expanded`, `aria-hidden`, `aria-live` throughout
-    - `font-variant-numeric: tabular-nums` on all score/count numbers
-    - `translate="no"` on brand and game names
-
-- **Session 24** — ResultsEntry audit passes + `/frontend-design` redesign + StatsModal metric cards grid:
-  - **`/web-design-guidelines` audit on `ResultsEntry.jsx`** — 9 fixes:
-    - `transition: 'all .2s ease'` on lock button → explicit `background, color, border-color, box-shadow`
-    - Added `className="results-page"` to outer div + CSS `@media (prefers-reduced-motion: reduce) { .results-page, .results-page * }` — covers page-wrapper, progress bar, tile inline transitions that the old `.game-content *` guard missed
-    - Summary + Stats header buttons: added `touchAction: 'manipulation'`
-    - Number pad buttons + "✓ Made" button: added `className="bid-num-btn"` for `:focus-visible` ring
-    - Running tab score spans: added `fontVariantNumeric: 'tabular-nums'`
-    - Highlight strip: added `aria-live="polite"`
-    - "Final ✓" / "Live · updating" status: added `aria-live="polite"`
-  - **`/react-best-practices` audit on `ResultsEntry.jsx`** — 5 fixes:
-    - `rerender-no-inline-components`: Extracted memoized `PlayerTile` module-level component — on each tricks-taken tap, only that player's tile re-renders (was all N tiles)
-    - `js-min-max-loop` + `js-combine-iterations`: `leaderIds` — replaced `Math.max(...map)` + filter/map with single O(n) loop tracking max inline
-    - `js-combine-iterations`: `topScorers` — single loop calling `scoreFor` once per player (was 4 passes, 2× `scoreFor` per player)
-    - `js-combine-iterations`: `nilAchievers` + `nilPending` merged from 2 separate useMemos into 1 combined pass
-    - `js-flatmap-filter`: `closestCalls` `.filter().map()` → `.flatMap()`
-
-- **Session 24 (earlier)** — ResultsEntry `/frontend-design` pass + StatsModal metric cards grid:
-  - **`/frontend-design` Q&A pass on `ResultsEntry.jsx`** — 4 questions revealed the core issue: the screen's focus should be entering results + watching standings update, not the trump/cards/tricks hero display. Changes made:
-    - **Compact info bar** replaces 3 hero cards (~150px) — single horizontal band (~64px): trump glyph + name + flavor label · cards count · bid sum · live tricks tracker with progress bar + status label. Reference info visible without dominating.
-    - **Header simplified** — leaderboard chips removed (redundant with Standings below). Header now: brand | timer + action buttons | AccountMenu only.
-    - **Player tiles** → `minmax(160px, 1fr)` — 2-col on phones, 30px number pad buttons, tighter padding. Fits all players at a glance without scrolling.
-    - **Rotating highlight card removed** — replaced with a compact single-line highlight strip: `★ MVP Adit +21 · ○ Nil Priya held · ≈ Close Raj one over`. All 3 categories visible simultaneously; strip hidden when no results entered yet.
-    - **Standings takes full width** — now the visual star of the lower section; gets a proper `<h2>` heading + more breathing room per player row.
-    - Removed: `mvpCardIdx` state, `MVP_CARDS` constant, rotating card section.
-    - **Design principle**: ResultsEntry primary purpose = data entry (player tiles) + drama (standings updating live). Trump/cards info is reference, not the focus.
-
-- **Session 24 (earlier)** — StatsModal player stats: table → metric cards grid:
-  - **Replaced horizontal-scroll table with responsive metric cards grid** — 12 cards, each card = one stat dimension, all players ranked within it.
-  - **Motivation**: the wide 15-column table was too congested on mobile (phone opened at the table). Cards grid solves this: 1 column on phones (<540px), 2 on tablet, 3 on desktop — readable at any screen width.
-  - **12 metric cards**: Accuracy, Nil Mastery, Small Rounds (1–4c), Large Rounds (5+c), Dealer Accuracy, Win Streak 🔥, Lose Streak 🧊, Best Round, Risk Appetite, Bid Drift, Close Calls, Best Trump.
-  - **Card design**: card header (icon + label + sub-description) → player rows sorted by metric (highest first; Drift: nearest 0 first). Leader row gets `color-mix` player-color tint + ★ marker. Players with no data show `—` at bottom.
-  - **`METRIC_CARDS` module-level array**: each entry has `key, label, sub, icon, iconColor, sort ('max'|'calibrated'), getValue(ps), render(ps), color(ps)` — same pattern as the old `COLS` but drives cards instead of table columns.
-  - **`MetricCard`** component (memoized): internal `useMemo` sorts players per card; `isLeader` handles tie detection including epsilon comparison for 'calibrated' drift.
-  - Removed: `COLS` array, `highlights` useMemo (leader detection moved into each `MetricCard`).
-  - Hero cards strip, score progression chart, and honorary titles unchanged.
-
-- **Session 23** — StatsModal redesign: unified comparison table + group stats + score chart:
-  - **`/frontend-design` Q&A + implementation on `StatsModal.jsx`** — iterated through two designs before landing on the right one:
-    - **Rejected: tabbed "Analyst's Booth"** — tried Tab 1 (2×2 hero grid + award plaques) / Tab 2 (per-player dossier). Reverted because tabs defeat the core purpose: the stats modal is a nerds view for comparing all players simultaneously in one scroll, not a per-player drill-down.
-    - **Shipped: unified single-scroll table** — rows = players, columns = 15 metrics. All players visible at once for cross-table comparison.
-  - **Structure (top to bottom)**:
-    - **Hero cards strip** (unchanged): Accuracy Leader + 🔥/🧊 streak sub-rows, Most Dramatic Round, The Table (lone wolf/over-under/tricks), Group Trump (best/worst suit).
-    - **Score Progression chart**: same interactive SVG chart as FinalResults — cumulative score per player across rounds, hover tooltip, player toggle chips to show/hide lines. Current leader's line is bold.
-    - **Player Stats table** (horizontal scroll):
-      - **★ Leads row** (above column headers): per-column leader names in their personal color; Drift column shows "most calibrated" (nearest to 0).
-      - **Column headers**: two groups separated by thicker divider — Accuracy block (Acc% / Nil / Nil ≤4c / Nil 5+c / 1–4c / 5+c / Dealt / Dealer%) and Character block (🔥 / 🧊 / Best rnd / Risk% / Drift / Close / Trump).
-      - **Player rows**: sticky left name column with 4px player-color left bar; leader cells get `color-mix` player-color tint; values in semantic colors (lime/red/amber).
-    - **Honorary Titles** (end-game only): award plaque grid — The Oracle, Hot Hand, Ice Cold, The Gambler, Nil Achiever, Closest Call. Each plaque has watermark icon + colored left bar + player list.
-  - **`gameLogic.js`** — 3 new exports: `closestCallCount(playerId, rounds)`, `groupBidStats(players, rounds)` (loneWolfRounds, mostChaotic, overRounds, underRounds, totalTricks), `groupTrumpStats(players, rounds)` (per-suit group accuracy array).
-  - **Architecture fix**: `useMemo` was called after early `return null` (rules-of-hooks violation). Fixed via outer `StatsModal` gating component + inner `StatsModalContent` holding all hooks.
-  - **Design principle captured**: StatsModal purpose = side-by-side comparison across all players. Single scroll, all players visible in every section. Tabs/per-player views defeat this.
-
-- **Session 22** — ResultsEntry Felt Table redesign + rotating highlight card:
-  - **`/frontend-design` pass on `ResultsEntry.jsx`** — full Felt Table aesthetic applied:
-    - **Suit-bleed background**: `tint.pageBleed` outer wrapper + `transition: background 0.9s ease` — page hue shifts with trump suit, matching BidEntry + PlayingScreen.
-    - **Diamond lattice**: fixed-position SVG overlay at `opacity: 0.022`.
-    - **Trump hero card**: suit-tinted bg/border, 130px watermark glyph at 9% opacity, `tint.flavor` label — replaces old amber gradient.
-    - **Running tab sidebar**: `.game-content` / `.game-tab-sidebar` layout at ≥1100px. Current-round row shows live `bid/took` per player as results are entered, color-coded green (made) / red (missed) / amber (pending).
-    - **Player tiles**: 4px player-color left bar; bid number displayed in player's personal color (28px); number pad bid position highlighted in player's color — consistent with BidEntry.
-    - **`✓ Made`** quick-fill button retained; tile background transitions to green/red on result entry.
-  - **Rotating highlight card** (replaces single static MVP card) — prev/next cycle buttons + dot indicators:
-    - **★ Round MVP**: top scorer(s) this round; ties handled — shows all tied players with "N-way tie · +X PTS EACH"; single winner uses player's personal color for score display.
-    - **○ Nil Achiever**: players who bid zero and held zero; shows "N nil bids in play" when pending; "No nil bids this round" when category doesn't apply.
-    - **≈ Closest Call**: players who missed by exactly 1 trick (one over / one short); handles multiple simultaneous near-misses.
-    - Card background, left-bar color, dot indicator, and label all shift color together per category (amber → lime → red).
-    - `@keyframes mvp-card-in` + `.mvp-card-in` CSS class: fade-up animation fires on every category switch.
-  - **`leaderIds` Set** replaces single `leaderId` — all tied top-scorers highlighted in mini leaderboard, running tab TOTAL/RANK rows, and standings.
-  - **Sticky lime footer**: when `allValid`, footer lifts to `position: sticky; bottom: 0` with lime (`V.accent3`) CTA + `tint.pageBleed` background — semantically distinct from BidEntry's amber "Lock & Play" CTA.
-  - **Full memoization**: `totalsBefore`, `ranksBefore`, `totalsAfter`, `ranksAfter`, `sortedAfter`, `leaderIds`, `topScorers`, `nilAchievers`, `nilPending`, `closestCalls`, `tabRounds`, `bidSum`, `handleLockResults`, `handleEndGame`, `setPlayerTook` all memoized. Flash timer ref cleaned up on unmount.
-  - **Honorary title stat ideas** noted for StatsModal / FinalResults: Nil Achiever, Closest Call King, Most Farthest (biggest average bid-vs-took delta), etc.
-
-- **Session 21** — PlayingScreen Felt Table redesign + audit sweep:
-  - **`/frontend-design` discussion-first pass on `PlayingScreen.jsx`** — applied full Felt Table aesthetic:
-    - **Suit-bleed background**: `tint.pageBleed` outer wrapper + `transition: background 0.9s ease` — page hue now shifts with trump (♠ cold steel, ♦ amber, ♣ olive, ♥ crimson, NT neutral), matching BidEntry.
-    - **Diamond lattice**: fixed-position SVG overlay at `opacity: 0.022`, consistent across all game screens.
-    - **Trump card full character**: 130px watermark glyph at 9% opacity behind content; `tint.flavor` label ("cold · commanding" etc.); `tint.labelColor` on label and subtext.
-    - **Locked bids grid**: bid number now renders in each player's personal color (`p.color`). Zero bids → `V.accent3` (lime) + "NIL CALL" label below. Undefined bids → `V.muted` dash. Makes each player's call instantly scannable without reading names.
-    - **Running tab current round row**: replaced "in play" text with the locked bid number prominently displayed + `.live-dot` pulsing amber dot underneath — signals this round is active while giving the table the bid reference they actually need.
-    - **Stats row redesigned** (confirmed by user): `StreakCard` → `WinStreakCard` (streak number in `V.accent3`/lime); `BiggestBidCard` → `LoseStreakCard` (longest *current* consecutive miss run — live shame indicator; card gets red-tinted border only when someone is actively cold); `DealerBurdenCard` unchanged.
-  - **Design decisions captured during discussion**: table uses screen occasionally (checks after a trick is won, not constantly); keep all 3 hero cards (Trump + Cards + Bid sum); bid number + pulsing dot preferred over "in play" text; stats cards kept visible for entertainment value.
-  - **`index.css`**: `@keyframes live-pulse` + `.live-dot` class added (pulsing amber dot; suppressed under `prefers-reduced-motion` via existing `.game-tab-sidebar *` guard).
-  - **Audit fixes** (`/react-best-practices` + `/web-design-guidelines`):
-    - `AnimatedTotal` wrapped in `React.memo` — pause timer fires `setNow` every second; memo prevents TOTAL-row re-renders when `totals` hasn't changed.
-    - `sorted` O(n log n) array → O(n) `leaderId` useMemo using `reduce`; no intermediate array.
-    - `topWinStreak` + `topLoseStreak` merged into single useMemo — one O(n) pass, `playerStreaks` called once per player (was called twice, once per separate useMemo).
-    - `TRUMPS` import removed (unused; only `trumpById` needed).
-    - Curly apostrophe `'` (U+2019) in LoseStreakCard "No one's on a cold streak".
-    - `overscrollBehavior: 'contain'` on PauseOverlay outer div (prevents body scroll bleed-through).
-    - `translate="no"` on Ka·Chu·Fu·L brand in header.
-
-- **Session 20** — BidEntry "Felt Table" redesign + audit sweep (BidEntry + PlayingScreen):
-  - **`/frontend-design` pass on BidEntry** — "Felt Table" aesthetic established (will carry forward to all game screens):
-    - **Suit-bleed page background**: outer wrapper `background: tint.pageBleed` + `transition: background 0.9s ease`. Page hue shifts with each new trump — ♠ cold steel-blue, ♦ amber-warm, ♣ olive-green, ♥ deep crimson, NT stays neutral. Goal: players associate page mood with the trump before reading the card.
-    - **Diamond lattice**: fixed-position SVG tile at `opacity: 0.022`, consistent with login + history pages.
-    - **Trump card full character**: `overflow: hidden` + 130px watermark glyph (9% opacity) floating behind content; suit flavor label beneath name ("cold · commanding", "flashy · treacherous", "earthy · grounded", "passionate · unforgiving").
-    - **Elevated chip strip**: taller chips — active `~50px`, done `~44px`, pending `~38px`. Active chip gets `.bid-chip-active` breathing ring (compositor-safe `::before` pseudo-element).
-    - **Player-color number pad**: selected bid button fills with `activePlayer.color` (personal palette color, not generic amber). Dark `#2a1620` text works across all 12 colors. Current bid display in spotlight also shows in player's color.
-    - **Radial spotlight glow**: active player spotlight uses `radial-gradient` from `activePlayer.color` anchored near avatar corner.
-  - **`gameColors.js` expanded**: `trumpTint()` now returns `pageBleed`, `labelColor`, `flavor` in addition to existing `bg`/`border`/`glyphColor`. Fully backward-compatible — PlayingScreen continues using existing keys.
-  - **`gameLogic.js`**: exported `trumpById = new Map(TRUMPS.map(t => [t.id, t]))` — O(1) suit lookup, replaces `TRUMPS.find()` in both BidEntry and PlayingScreen.
-  - **Audit fixes applied** (`/web-design-guidelines` + `/react-best-practices` + `/composition-patterns`):
-    - `BidEntry`: `pressedBtnTimerRef` added + cleared on unmount (was leaking); `tabRounds` memoized; `translate="no"` on Ka·Chu·Fu·L brand; active player name gets `overflow: hidden / textOverflow: ellipsis`; Lock button gets `game-cta-btn` class (hover state).
-    - `PlayingScreen`: `StreakCard`, `BiggestBidCard`, `DealerBurdenCard` wrapped in `React.memo` — pause timer ticked 1 re-render/sec, these three cards now skip; `{ totalScores, minTotal, maxTotal }` merged into one `useMemo`; display name overflow protection in locked bid cards; expand button gets `game-icon-btn` class; `trumpById` Map lookup.
-    - `index.css`: `chip-breathe` rewritten using `::before` pseudo-element with `transform`/`opacity` (was `box-shadow`, which triggers repaint); `game-cta-btn` gains `.game-cta-btn:hover` opacity transition; `.bid-btn-forbidden` gains ambient red `box-shadow` glow.
-  - **Composition findings** (deferred to next session): `RunningTab` table is ~130 lines duplicated between BidEntry and PlayingScreen (and will repeat in ResultsEntry). Extract as shared `RunningTab` component with `currentRoundSlot` render prop for the phase-specific row. `GameHeader` wrapper also worth extracting once all three screens are redesigned.
-  - **CLAUDE.md**: Track 2 table updated — all 5 screens marked `⚠ Needs /frontend-design pass`; Felt Table aesthetic documented.
-
-- **Session 19** — PlayingScreen redesign + audit fixes:
-  - `PlayingScreen.jsx` full redesign (discussion-first, matching BidEntry's design language):
-    - **Layout**: `.game-content` two-column grid — locked bids left, running tab as sticky right sidebar at ≥1100px; stacks below at <1100px. Stats row (3 cards) spans full width below `.game-content`. Footer 2-column (hint left, Enter Results right).
-    - **Header**: icon-only `game-icon-btn` buttons (◍ Game Summary, ⊞ Stats, ☕/▶ Pause) — no leaderboard chips. Pause button turns red-tinted when active.
-    - **Hero trump card**: suit-tint treatment from `trumpTint()` — no gradient. Red suits → accent2 tint, black suits → accent tint, NT → dashed border.
-    - **Hero cards card**: replaced misleading "Bid sum was X · someone was off" with "X of N tricks called".
-    - **Locked bids**: removed "BID TRICKS" label; zero-bid number is `V.ink` (not lime).
-    - **Dealer's burden card**: removed Recent/Career toggle; always shows recent 3 rounds.
-    - **Pause overlay**: extracted as `PauseOverlay` component with `role="dialog"`, `aria-modal`, `aria-label`, Escape key handler, and auto-focus on Resume button when opened.
-  - `src/lib/gameColors.js` — new shared module; `trumpTint()` extracted from BidEntry + PlayingScreen into one place.
-  - `BidEntry.jsx`: removed local `trumpTint`, imports from `gameColors`.
-  - **Composition**: extracted `StreakCard`, `BiggestBidCard`, `DealerBurdenCard`, `PauseOverlay` as module-level components in PlayingScreen.
-  - **Performance**: all derived values memoized (`totals`, `ranks`, `sorted`, `topStreak`, `biggest`, `recent3`, `tabRounds`); interval only ticks when `paused`; `togglePause` + `handleEndGame` wrapped in `useCallback`.
-  - **Accessibility**: `scope="col"` on `<th>`; "Bids locked in" heading → `<h2>`; `aria-label` on sections; `aria-expanded` on expand button; `aria-hidden` on decorative symbols; focus-visible rings on all buttons.
-  - **CSS** (`index.css`): `.game-cta-btn` + `.game-expand-btn` focus-visible rings; `@media (prefers-reduced-motion: reduce)` guard suppressing all game transitions/animations.
-
-- **Session 18** — Free Form Entry setup + BidEntry redesign:
-  - `supabase/add_freeform_game.sql` migration: adds `games.team_mode` (text, check `none|alternating|custom`) and `game_players.team` (smallint, check 1|2). Applied to production.
-  - `Home.jsx`: added `freeform` as available card game; `teamMode` state (`none`/`alternating`/`custom`); Team Mode config card (radio-style three-way toggle) shown only when freeform selected; seat cards show A/B badges (alternating = static, custom = tappable toggle); Dealer section and Advanced Settings hidden for freeform; `canStart` updated (freeform doesn't require dealer); game INSERT writes `team_mode`; game_players INSERT writes `team` per seat.
-  - `CLAUDE.md`: documented preview/auth-guard limitation (`npx vite build --mode development` is the correct verification method); documented Track 2 design notes (chip strip opacity, running tab sidebar layout, pending deep dives for StatsModal + SummaryModal).
-  - `BidEntry.jsx` full redesign:
-    - **Layout**: responsive two-column grid (`.game-content`) — spotlight left, running tab as sticky right sidebar (380px) at ≥1100px; stacks below at <1100px. Round column sticky-left inside horizontal scroll.
-    - **Header**: icon-only modal buttons (36×36, `◍`/`⊞`); leader chip gets 3px player-color left border instead of ★.
-    - **Hero**: trump card is suit-tinted (red = accent2 tint, black = accent tint, NT = muted bg + dashed border), 80px glyph-first, no gradient. Bid sum card leads with progress bar (10px), number below.
-    - **Chip strip**: done players `opacity: 0.78`; done chip restructured — bid number (20px bold) on top, name (9px mono) below; pending `opacity: 0.35`; active full opacity + amber border + pulsing dot.
-    - **Number pad**: 68×76px buttons, 24px font. Forbidden buttons: diagonal red CSS strike (`::after`), shake animation on tap (`forbidden-shake`), no bid registered.
-    - **Footer**: live contextual hint replaces static scoring formula.
-  - `index.css`: added `.game-content`, `.game-tab-sidebar`, `.game-tab-round-cell`, `.bid-btn-forbidden`, `@keyframes forbidden-shake`, `.game-icon-btn`, `.bid-num-btn`, `.bid-chip-btn`, `.setup-seat-team-btn` classes.
-  - **Post-session audit fixes** (`/web-design-guidelines` + `/react-best-practices`):
-    - `BidEntry`: `bidOrder` memoized with `useMemo([n, dealerIdx])`; eslint-disable suppression removed; effect deps now honest `[roundNumber, dealerIdx, n, defaultCards]`; shake timer stored in `shakeBtnTimerRef` with unmount cleanup; `game-icon-btn` class on cards ±/expand buttons for `focus-visible`.
-    - `Home`: `teamMode` reset effect replaced with `selectGame` `useCallback` (no extra render cycle); custom team badge button moved outside seat `<button>` (was invalid nested interactive elements); seat button `aria-label` now includes team assignment when teamMode active; team badge bumped to 22px with `touch-action` and `focus-visible`.
-
-- **Session 17** — Composition patterns polish + frequent-player suggestions + Free Form Entry planning:
-  - **Login.jsx** (`patterns-explicit-variants`): extracted `SignInPanel`, `SignUpPanel`, `GuestPanel` as explicit variant components — render method reduced to 3 clean ternary lines; each panel is self-documenting and independently readable
-  - **History.jsx** (`architecture-avoid-boolean-props`): split `GameTile` boolean-prop component into `AvailableGameTile` (interactive `<button>`, count, hover) and `ComingSoonGameTile` (inert `<div>`, "Soon" badge); shared `tileBaseStyle` constant
-  - **Frequent-player suggestions** (`useFrequentPlayers` hook + `SeatEditor`):
-    - `src/hooks/useFrequentPlayers.js`: queries `game_players` for non-host seats from the current user's games; aggregates by `display_name` with play count; pre-fills colour from most recent appearance; returns top 8 by frequency; cleans up on unmount
-    - `SeatEditor`: displays frequent players as list rows (colour dot · name · ×N count); empty input shows all ranked by frequency, typing filters by prefix; Tab or click applies name + pre-fills colour; replaces hardcoded `NAME_SUGGESTIONS` array
-
-- **Session 16** — Setup page react-best-practices + web-design-guidelines audit + fixes:
-  - **CSS** (`index.css`): 18 new `.setup-*` classes — `:hover` transitions, `:focus-visible` rings (2px amber outline), `touch-action: manipulation` on all interactive elements; removes all JS `onMouseEnter/Leave` style mutations from the page
-  - **Semantic HTML**: page body `<div>` → `<main>`; seats strip + config cards wrapped in `<section aria-label="…">`
-  - **ARIA fixes**: `role="radiogroup"` wrapper on card game radio buttons; `aria-expanded` + `aria-controls="adv-settings"` on settings toggle; `aria-hidden` on decorative arrows/glyphs; color swatch `aria-label` now uses human name (e.g. `"amber"`) via `COLOR_NAMES` map instead of raw hex
-  - **Focus**: `outline: 'none'` removed from both inputs; focus handled by `.setup-name-input:focus` / `.setup-game-name-input:focus` CSS
-  - **`transition: 'all'`** removed from tab switcher → explicit `background`, `color` in CSS class
-  - **React**: `SeatAvatar`, `SeatEditor`, `Stepper` wrapped in `memo`; `addPlayer`, `removePlayer`, `updatePlayer`, `assignDealer`, `closeEditor`, `toggleAdv`, `dismissBanner` in `useCallback`; `usedNames` + `hints` in `useMemo`
-  - **`useEffect` deps**: removed all `eslint-disable-line` suppression comments; proper dependency arrays
-  - **JSX**: all `{x && <el>}` → `{x ? <el> : null}` throughout
-
-- **Post-Session 15** — Setup page full redesign — "The Pre-Game Huddle" (`Home.jsx`):
-  - **Layout**: non-sequential two-column grid — all config visible without scrolling; seats strip at top as the hero interaction; config cards below; sticky header with ← History link; sticky bottom bar with live blocking hints + Start Game button
-  - **Player seats**: seat cards (86×86) with avatar + name; tap to open inline `SeatEditor` popover with name input (Tab-to-autocomplete from suggestions), Colors tab (12-color palette) + Emojis tab (24 emoji avatars); dealer badge shown on assigned seat card; × remove button appears on hover (only when >2 players); click-outside closes editor
-  - **Config cards**:
-    - Game selection: pill buttons for card games + compact board game chips (Catan, Ticket to Ride, Pandemic as "Soon" tiles)
-    - Dealer: single "Assign randomly 🎲" button → shows result + ↻ Again (replaces cut-for-dealer card mechanic)
-    - Game name: bottom-border-only input, consistent with login style
-    - Settings: collapsed by default, toggle to expand scoring/rules/rounds config
-  - **Sticky bar**: live blocking hints ("2 players need a name · assign a dealer") clear to "N players · ready ✓" when all conditions met; Start Game activates only when all conditions met
-  - **Preserved**: all Supabase INSERT logic, `game_type` + `game_subtype` in insert, anonymous upgrade banner, all accessibility attrs, Stepper component
+- **S1–S6**: Scaffold → schema → auth (Google + anonymous) → Lantern theme → gameLogic.js → full Ka Chu Fu L game loop (BidEntry, PlayingScreen, ResultsEntry, FinalResults, Game.jsx phase router)
+- **S7**: useHistory hook + History.jsx (deep Supabase query, 4-stat summary, game list)
+- **S8**: GameOverSplash (confetti), FinalResults podium + share dropdown, rankBg, AccountMenu
+- **S9**: StatsModal + gameLogic stat functions (nilBidStats, cardCountStats, dealerBurden, etc.); Stats button wired everywhere
+- **S10**: Multi-game type (game_type/game_subtype/game_config columns + migration); Home.jsx game-selection flow; freeform placeholder
+- **S11**: Ujagro rebrand; Google OAuth redirect fixed to Vercel URL
+- **S12**: profiles RLS own-row-only; micro-animations (useCountUp, ripple, avatar-pulse, score-pop); 6 CCR scheduled routines
+- **S13**: Accessibility pass (aria-*, focus-visible, color-scheme, theme-color meta)
+- **S15**: Login redesign polish (React.memo, keyframes to CSS, focus-visible); History "Scorebook" redesign (lattice bg, expandable cards)
+- **S16**: Home.jsx audit — 18 setup-* CSS classes, semantic HTML, React.memo + useCallback + useMemo
+- **S17**: Login/History composition refactor (explicit variant components); useFrequentPlayers hook + SeatEditor
+- **S18**: Free Form Entry setup (team_mode/team columns + migration, A/B badges); BidEntry full redesign (game-content grid, chip strip, forbidden shake)
+- **S19**: PlayingScreen redesign; gameColors.js created (trumpTint); PauseOverlay component
+- **S20**: BidEntry "Felt Table" (suit-bleed, lattice, watermark, flavor, player-color pad, radial glow); gameColors.js expanded (pageBleed/labelColor/flavor); trumpById Map in gameLogic.js
+- **S21**: PlayingScreen Felt Table (suit-bleed, lattice, live-dot running tab row, WinStreakCard/LoseStreakCard); full audit
+- **S22**: ResultsEntry Felt Table; rotating highlight card (MVP/Nil/Closest Call); leaderIds Set; sticky lime footer
+- **S23**: StatsModal redesign — hero cards + score progression chart + 15-col comparison table + honorary titles; groupBidStats/groupTrumpStats/closestCallCount added to gameLogic.js
+- **S24**: StatsModal → 12 metric cards grid (METRIC_CARDS/MetricCard); ResultsEntry /frontend-design (compact info bar, 2-col tiles, highlight strip, standings primary); full audit fixes
+- **S25**: StatsModal audit (7 web + 7 react fixes); GameHeader + RunningTab extracted as shared components; formatRank/rankBg moved to gameColors.js; ~400 lines removed from callers
+- **S26**: SummaryModal /frontend-design (leader hero with watermark, standings section, Felt Table panel)
 
 ## Tooling & Workflow
 
@@ -539,86 +245,50 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
 `https://kachuful-eight.vercel.app`
 
 ### Scheduled Remote Agents
-6 CCR routines run in Anthropic's cloud against the GitHub repo. Manage at `https://claude.ai/code/routines`.
-Routines use the **Supabase MCP** connector (credentials stored securely by Anthropic — not in code) and **Gmail MCP** for email reports to ptladit@gmail.com.
-
-### Track 2 — Game Flow Frontend Design Notes
-Design intent captured before the `/frontend-design` pass on `BidEntry`, `PlayingScreen`, `ResultsEntry`:
-
-- **BidEntry chip strip — done players**: players who have already bid should remain clearly readable (name + bid number visible), not strongly faded. The chip can de-emphasise slightly to let the active player stand out, but the bid value must stay legible — the table is watching and cross-checking each other's calls.
-- **Running tab layout**: breakpoint is **1100px viewport width**. Above 1100px: running tab is a sticky right sidebar (~380px fixed), spotlight/entry takes the remaining left column, hero cards and footer span full width. Below 1100px: running tab stacks below the spotlight as today. Round column is `position: sticky; left: 0` (opaque bg) so it stays anchored when the table scrolls horizontally for many players. No JS needed — pure CSS grid + media query. Applies to BidEntry, PlayingScreen, and ResultsEntry.
-- **Execution order**: (1) Composition — extract `GameHeader`, `HeroCards`, `RunningTab`, shared `gameColors.js`; (2) **discussion-first `/frontend-design` pass** (must use the skill, not just manual redesign); (3) quality passes (`/react-best-practices`, `/web-design-guidelines`, `/composition-patterns`).
-- **Do not touch**: `GameOverSplash` (already the best screen), running tab data structure, footer CTA button positioning/sizing.
-- **"Felt Table" aesthetic** (established Session 20): diamond lattice background at 2% opacity; per-suit page background bleed (♠ cold steel, ♦ amber-warm, ♣ olive-green, ♥ deep crimson, NT neutral) via `trumpTint().pageBleed` + `transition: background 0.9s`; watermark glyph on trump card; suit flavor labels ("cold · commanding" etc.); active chip breathing ring (`.bid-chip-active`); player-color fill on selected bid button; radial glow spotlight from active player's color. All implemented in `gameColors.js` + `BidEntry.jsx`.
-
-#### /frontend-design status — always discussion-first before implementing
-| Screen | Status | Notes |
-|--------|--------|-------|
-| `BidEntry.jsx` | ⚠ Needs `/frontend-design` pass | Felt Table aesthetic applied manually Session 20 — still needs the proper skill pass for a formal aesthetic review + any missed opportunities. |
-| `PlayingScreen.jsx` | ✓ Done Session 21 | Felt Table applied (suit-bleed, lattice, watermark, flavor label, player-color bids, live-dot running tab row, WinStreakCard + LoseStreakCard). Full audit pass done. |
-| `ResultsEntry.jsx` | ✓ Done Session 24 | Felt Table (suit-bleed, lattice, watermark, flavor label) from Session 22. Session 24 `/frontend-design` pass: 3 hero cards → compact info bar; header chips removed; player tiles 2-col mobile (minmax 160px); rotating highlight card → compact 1-line strip (MVP · nil · closest); Standings full width as primary section. |
-| `StatsModal.jsx` | ✓ Done Session 24 | Hero cards strip + score progression chart (unchanged). Player stats: 12 metric cards grid (1 col phone / 2 col tablet / 3 col desktop) — each card is one stat, all players ranked. Replaces wide 15-column horizontal table which was too congested on mobile. Honorary titles end-game only. Design rule: all players visible at once per dimension, no tabs. |
-| `SummaryModal.jsx` | ⚠ Needs `/frontend-design` pass | Game Summary overlay; purpose discussion + redesign needed. |
-
-#### Composition — deferred to after all /frontend-design passes are done
-- **Extract `RunningTab`**: ~130 lines of identical table markup in BidEntry + PlayingScreen (+ future ResultsEntry). Use `currentRoundSlot` prop for the phase-specific current-round row. Eliminates the duplication and gives ResultsEntry the component for free.
-- **Extract `GameHeader`**: Ka·Chu·Fu·L brand lockup + round subheading shared across all three screens. Phase-specific buttons passed as children.
+6 CCR routines run in Anthropic's cloud. Manage at `https://claude.ai/code/routines`.
+Routines use Supabase MCP + Gmail MCP for email reports to ptladit@gmail.com.
 
 ### Preview / Verification Limitation
-The preview browser (`preview_start` / `preview_screenshot`) has no Supabase session, so every route behind `ProtectedRoute` redirects to `/login` and renders a blank `#root`. This means:
-- Navigating to `/`, `/history`, `/game/:id`, etc. will always show a blank page in the preview tool.
-- `preview_console_logs` and `preview_logs` will show no errors — just Vite HMR updates — because the build itself is fine.
-- The correct way to verify a build is: **`npx vite build --mode development`** — a clean exit with module count confirms no compile errors.
-- Visual verification of guarded pages must be done in a real browser where the user is logged in (production URL or `localhost:5173` with an active session).
-- Static demo pages under `public/` (e.g. `public/setup-demo.html`) are not kept in sync with the live React code and should not be used as a proxy for app correctness.
+The preview browser has no Supabase session — every route behind `ProtectedRoute` redirects to `/login` (blank `#root`). Correct verification: **`npx vite build --mode development`** — clean exit confirms no compile errors. Visual verification requires a real browser with an active session (production URL or `localhost:5173`).
+
+### "Felt Table" Aesthetic — Key Design Rules
+Applied to all game screens (BidEntry, PlayingScreen, ResultsEntry) and modals:
+- **Suit-bleed background**: `trumpTint().pageBleed` + `transition: background 0.9s ease` — page hue shifts per trump (♠ cold steel, ♦ amber-warm, ♣ olive-green, ♥ deep crimson, NT neutral)
+- **Diamond lattice**: fixed-position SVG at `opacity: 0.022`
+- **Trump card**: `overflow: hidden` + 130px watermark glyph at 9% opacity + suit flavor label ("cold · commanding" etc.)
+- **Player-color**: bid buttons fill in player's personal color; bids in running tab shown in player's color
+- All implemented via `gameColors.js` (`trumpTint`) + per-screen inline styles
+
+### Running Tab Layout
+Breakpoint: **1100px viewport**. Above: sticky right sidebar (~380px), spotlight/entry takes left column. Below: stacks. Round column `position: sticky; left: 0`. Implemented via `.game-content` + `.game-tab-sidebar` CSS classes in `index.css`.
+
+### Game Screen Status
+
+| Screen | Status |
+|--------|--------|
+| `BidEntry.jsx` | Felt Table ✓ (S20). Pending: `/web-design-guidelines` + `/react-best-practices` + `/composition-patterns` audit (S27) |
+| `PlayingScreen.jsx` | ✓ Done S21 — Felt Table + full audit |
+| `ResultsEntry.jsx` | ✓ Done S24 — Felt Table + /frontend-design + full audit |
+| `StatsModal.jsx` | ✓ Done S24/S25 — /frontend-design (12 metric cards) + full audit |
+| `SummaryModal.jsx` | /frontend-design ✓ (S26). `/web-design-guidelines` ✓ (S27). Pending: `/react-best-practices` audit |
+| `GameHeader.jsx` | ✓ Extracted S25. Pending: `/web-design-guidelines` + `/react-best-practices` audit (S27) |
+| `RunningTab.jsx` | ✓ Extracted S25. Pending: `/web-design-guidelines` + `/react-best-practices` audit (S27) |
 
 ## Deferred / Future
 
-- **Free Form Entry game — setup page** ✓ done Session 18
-- **Free Form Entry game — game loop** (after setup): round structure (no trump/bid mechanics); scorekeeper enters a raw score per player or per team per round; round_results.score stored directly; running totals shown; End Game same as Ka Chu Fu L
-- **Offline support** — defer; internet connection assumed for now
-- **Session 25** — `StatsModal.jsx` audit passes (`/web-design-guidelines` + `/react-best-practices`):
-  - **`/web-design-guidelines`** — 7 fixes:
-    - `overscrollBehavior: 'contain'` on modal scroll backdrop
-    - `role="dialog"` + `aria-modal="true"` + `aria-labelledby="stats-modal-title"` on inner panel; `id` added to `<h2>`
-    - Close button: added `className="stats-close-btn"` with CSS focus-visible ring
-    - Player toggle chips: `<div role="button">` → semantic `<button className="stats-player-chip">` + CSS focus ring
-    - `transition: 'all .15s ease'` on player chips → explicit `border-color, background, opacity`
-    - `fontVariantNumeric: 'tabular-nums'` on tooltip scores, hero accuracy %, round number, failCount
-  - **`/react-best-practices`** — 7 fixes:
-    - `ProgressionChart.series`: memoized with `useMemo([players, rounds, variant])` — `cumulativeScoreByRound` no longer runs on every mouse-move hover re-render
-    - `seriesById` Map: `series.find()` O(n) scan per tooltip player → `seriesById.get()` O(1)
-    - `TRUMPS.find()` in tooltip → `trumpById.get()` (Map already imported)
-    - `MetricCardInner.ranked` useMemo: `card.getValue` called 4× per player (2 filters, sort comparisons, render, `isLeader`) → 1× via pre-computed `vals` Map; single loop partitions withData/noData; sort uses cached values
-    - `accLeader` useMemo: 4 passes (map→spread max→filter→map) → 1 loop + 1 filter
-    - `streakLeaders` useMemo: 4 passes (2× spread max, 2× filter) → 1 loop + up to 2 filters
-    - `titles` useMemo: 11 passes (5× spread max, 6× filter) → 1 loop + up to 6 filters
+### Session 27 Next Steps (in order)
+1. `/react-best-practices` audit on `SummaryModal.jsx`
+2. `/web-design-guidelines` + `/react-best-practices` audit on `GameHeader.jsx` + `RunningTab.jsx`
+3. `/web-design-guidelines` + `/react-best-practices` + `/composition-patterns` on `BidEntry.jsx`, `PlayingScreen.jsx`, `ResultsEntry.jsx`
 
-- **Session 25 (continued)** — `/composition-patterns` audit + `GameHeader` + `RunningTab` extraction:
-  - **`/composition-patterns` findings**: `GameHeader` brand lockup (~60 lines × 3) and `RunningTab` score table (~130 lines × 3) were copy-pasted identically across `BidEntry`, `PlayingScreen`, `ResultsEntry`; `formatRank` + `rankBg` tripled too
-  - **`src/components/game/GameHeader.jsx`** — new shared component: Ka·Chu·Fu·L lockup + round/phase subheading + `children` center slot (timer + phase buttons) + `right` slot (defaults to `<AccountMenu />`); memoized
-  - **`src/components/game/RunningTab.jsx`** — new shared component: completed-rounds table + TOTAL/RANK footer + expand button; `renderCurrentRound` render prop for phase-specific current-round `<tr>`; `renderTotal` + `totalCellColor` optional overrides for TOTAL row animation/color
-  - **`src/lib/gameColors.js`** — `formatRank` + `rankBg` exported here; removed from all 3 screen files
-  - **Net**: BidEntry 865→727 lines, PlayingScreen 722→599, ResultsEntry 804→665; ~400 lines removed from callers, replaced by ~200 lines in 2 shared files
-
-- **Session 26** — `SummaryModal.jsx` `/frontend-design` pass:
-  - **Design direction** (Q&A): TV-display moment (whole table reads from across the room) · Leader card is the hero · Full Felt Table aesthetic · Keep compact per-player stats
-  - **Leader Hero section**: 5px left bar in leader's personal color; leader name 34px in personal color; score 60px in V.ink; trump glyph 172px watermark behind; section background `color-mix` washed in leader's color; "+N ahead of Player2" subtext
-  - **Standings section**: replaces old "per-player stats" cards — tight row per player: 4px color bar · rank · avatar · name · score (22px) · Acc% / 🔥 best / 🧊 best stat chips
-  - **Felt Table**: suit-tinted modal panel background via `color-mix(tint.pageBleed 22%, V.surface)`; diamond lattice on backdrop; trump watermark in hero; `transition: background 0.7s ease` on panel
-  - **Accessibility**: `role="dialog"` + `aria-modal="true"` + `aria-label`; `overscrollBehavior: 'contain'`; `touchAction: 'manipulation'` on buttons; `fontVariantNumeric: 'tabular-nums'` on all score cells; close button uses `stats-close-btn` class
-  - **Cleanup**: removed local `formatRank`/`rankBg` (now from `gameColors`); replaced `TRUMPS.find()` with `trumpById.get()`; removed unused `trumpPerformance` import
-
-- **Session 27 next steps** (in order):
-  1. Run `/web-design-guidelines` + `/react-best-practices` audit on `SummaryModal.jsx`
-  2. Run `/web-design-guidelines` + `/react-best-practices` audit on `GameHeader.jsx` + `RunningTab.jsx`
-  3. Run `/web-design-guidelines` + `/react-best-practices` + `/composition-patterns` on `BidEntry.jsx`, `PlayingScreen.jsx`, `ResultsEntry.jsx`
-- **Multi-device sessions** — each player connects on their own phone to view status and submit bids; major architecture pivot, very future
-- **3 of Spades rules** — scoring, round structure, and game loop to be defined and implemented
-- **Board game support** — free-form entry scoring model; specific games TBD
-- **Emoji retention across games** — add `emoji` column to `game_players` so the SeatEditor can pre-fill the emoji a player used last time, alongside the existing colour pre-fill
-- **Full recurring-player schema** (`saved_players` table) — host can explicitly pin frequent players; schema: `id, user_id, display_name, color, emoji, games_together_count, last_played_at`; upsert after each game; RLS on `user_id`; replaces the lightweight frequency query in `useFrequentPlayers`. Unlocks: pin/unpin UI, richer suggestion ordering, survives game data pruning
-- **Player identity across games** — currently only the host's seat is linked to a Supabase profile (`user_id`); non-host players are anonymous name strings with no cross-game correlation. Long-term: allow non-host players to have accounts so their stats accumulate regardless of who hosts
-- **Group stats in FinalResults** — "The Table" hero card and group trump card are now in StatsModal Tab 1; consider surfacing lone wolf count + over/under split in FinalResults standings as well
-- **Rank 1 / top scorer visual treatment** — apply amber gradient highlight to the rank-1 row and top scorer chip so first place has a distinctive glow beyond the medal emoji
-- **Tie handling for rank display** — currently only 1 player is shown as rank 1 in cases of a tied total; expand to award the same rank to all tied players and show multiple winners in `GameOverSplash`, `FinalResults` podium, and `History` winner display
+### Backlog
+- **Free Form Entry game loop** — round structure (no trump/bid mechanics); scorekeeper enters raw score per player/team per round; round_results.score stored directly; running totals; End Game same as Ka Chu Fu L
+- **3 of Spades** — scoring, round structure, and game loop to be defined
+- **Board game support** — free-form scoring model; specific games TBD
+- **Emoji retention** — add `emoji` column to `game_players` so SeatEditor can pre-fill emoji alongside colour
+- **Saved players schema** — `saved_players` table: `id, user_id, display_name, color, emoji, games_together_count, last_played_at`; upsert after each game; replaces lightweight frequency query in `useFrequentPlayers`
+- **Player identity across games** — non-host players are anonymous name strings; long-term allow non-host accounts so stats accumulate regardless of who hosts
+- **Tie handling for rank display** — award same rank to all tied players; show multiple winners in GameOverSplash, FinalResults podium, and History
+- **Rank 1 visual treatment** — amber gradient highlight on rank-1 row and top scorer chip
+- **Multi-device sessions** — each player on their own phone; major architecture pivot, very future
+- **Offline support** — defer; internet connection assumed

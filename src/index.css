@@ -516,13 +516,18 @@
 }
 .mvp-card-in { animation: mvp-card-in 0.2s ease-out both; }
 
+.summary-modal-panel {
+  transition: background 0.7s ease;
+}
+
 /* Honour prefers-reduced-motion across all game animations */
 @media (prefers-reduced-motion: reduce) {
   .results-page,
   .results-page *,
   .game-progress-bar,
   .game-tab-sidebar *,
-  .game-content * {
+  .game-content *,
+  .summary-modal-panel {
     transition: none !important;
     animation: none !important;
   }

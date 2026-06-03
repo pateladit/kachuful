@@ -79,9 +79,6 @@ export default function SummaryModal({
   return (
     <div
       onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Game Summary"
       style={{
         position: 'fixed', inset: 0, zIndex: 100,
         background: 'rgba(18,8,14,.82)',
@@ -104,6 +101,10 @@ export default function SummaryModal({
 
       <div
         onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="summary-modal-title"
+        className="summary-modal-panel"
         style={{
           position: 'relative', zIndex: 1,
           maxWidth: 760,
@@ -112,7 +113,6 @@ export default function SummaryModal({
           border: `1px solid ${V.line}`,
           borderRadius: 24,
           overflow: 'hidden',
-          transition: 'background 0.7s ease',
         }}
       >
 
@@ -128,7 +128,7 @@ export default function SummaryModal({
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.18em', textTransform: 'uppercase', color: V.muted, marginBottom: 5 }}>
               Game Summary · timer paused
             </div>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, letterSpacing: '-0.01em', color: V.ink, margin: '0 0 6px' }} translate="no">
+            <h2 id="summary-modal-title" style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, letterSpacing: '-0.01em', color: V.ink, margin: '0 0 6px' }} translate="no">
               {game.name || 'Ka·Chu·Fu·L'}
             </h2>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, display: 'flex', gap: 10, letterSpacing: '.04em', flexWrap: 'wrap' }}>
@@ -152,6 +152,7 @@ export default function SummaryModal({
             aria-label="Close summary (Esc)"
             title="Close (Esc)"
             className="stats-close-btn"
+            autoFocus
             style={{ background: 'transparent', border: 'none', color: V.muted, fontSize: 24, cursor: 'pointer', lineHeight: 1, padding: '0 4px', touchAction: 'manipulation' }}
           >×</button>
         </div>
@@ -286,7 +287,7 @@ export default function SummaryModal({
                     scope="col"
                     style={{ textAlign: 'left', padding: '9px 12px', borderBottom: `1px solid ${V.line}`, color: V.muted, fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', fontWeight: 600, width: 72 }}
                   >Round</th>
-                  {players.map((p, i) => (
+                  {players.map(p => (
                     <th key={p.id} scope="col" style={{ padding: '9px 6px', borderBottom: `1px solid ${V.line}`, borderLeft: `1px solid ${V.line}`, textAlign: 'center' }}>
                       <Avatar player={p} size={22} />
                       <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: V.ink, fontWeight: 600, marginTop: 2, textTransform: 'none', letterSpacing: 0 }}>{p.displayName}</div>
@@ -300,7 +301,7 @@ export default function SummaryModal({
                   const isPending = r.took === null || r.took === undefined
                   return (
                     <tr key={r.id} style={{ background: isPending ? `color-mix(in oklab, ${V.accent} 6%, ${V.bg2})` : V.bg2 }}>
-                      <td style={{ padding: '8px 12px', borderBottom: `1px solid ${V.line}`, fontFamily: 'var(--font-display)', fontWeight: 600, color: isPending ? V.accent : V.ink }}>
+                      <td style={{ padding: '8px 12px', borderBottom: `1px solid ${V.line}`, fontFamily: 'var(--font-display)', fontWeight: 600, color: isPending ? V.accent : V.ink, fontVariantNumeric: 'tabular-nums' }}>
                         R{r.roundNumber}
                         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, marginLeft: 5 }}>
                           <span style={{ color: tr?.red ? 'var(--color-red-suit, #e57860)' : V.muted }}>{tr?.glyph}</span>
@@ -313,7 +314,7 @@ export default function SummaryModal({
                           return (
                             <td key={p.id} style={{ padding: '8px 6px', borderBottom: `1px solid ${V.line}`, borderLeft: `1px solid ${V.line}`, textAlign: 'center' }}>
                               <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: V.muted }}>—</div>
-                              <div style={{ fontSize: 9, color: V.muted }}>{b !== undefined ? `bid ${b}` : '—'}</div>
+                              <div style={{ fontSize: 9, color: V.muted, fontVariantNumeric: 'tabular-nums' }}>{b !== undefined ? `bid ${b}` : '—'}</div>
                             </td>
                           )
                         }
@@ -335,7 +336,7 @@ export default function SummaryModal({
                             <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: made ? V.accent3 : V.accent2, fontVariantNumeric: 'tabular-nums' }}>
                               {made ? `+${pts}` : '0'}
                             </div>
-                            <div style={{ fontSize: 9, color: V.muted }}>{b}/{k}</div>
+                            <div style={{ fontSize: 9, color: V.muted, fontVariantNumeric: 'tabular-nums' }}>{b}/{k}</div>
                           </td>
                         )
                       })}
@@ -392,6 +393,7 @@ export default function SummaryModal({
             </button>
             <button
               onClick={onEndGame}
+              className="game-icon-btn"
               style={{
                 background: `color-mix(in oklab, ${V.accent2} 18%, ${V.surface})`,
                 border: `1px solid ${V.accent2}`,
