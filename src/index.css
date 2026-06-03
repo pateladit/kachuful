@@ -512,6 +512,8 @@
 
 /* Honour prefers-reduced-motion across all game animations */
 @media (prefers-reduced-motion: reduce) {
+  .results-page,
+  .results-page *,
   .game-progress-bar,
   .game-tab-sidebar *,
   .game-content * {

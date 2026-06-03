@@ -366,7 +366,23 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
     - `font-variant-numeric: tabular-nums` on all score/count numbers
     - `translate="no"` on brand and game names
 
-- **Session 24** — ResultsEntry `/frontend-design` pass + StatsModal metric cards grid:
+- **Session 24** — ResultsEntry audit passes + `/frontend-design` redesign + StatsModal metric cards grid:
+  - **`/web-design-guidelines` audit on `ResultsEntry.jsx`** — 9 fixes:
+    - `transition: 'all .2s ease'` on lock button → explicit `background, color, border-color, box-shadow`
+    - Added `className="results-page"` to outer div + CSS `@media (prefers-reduced-motion: reduce) { .results-page, .results-page * }` — covers page-wrapper, progress bar, tile inline transitions that the old `.game-content *` guard missed
+    - Summary + Stats header buttons: added `touchAction: 'manipulation'`
+    - Number pad buttons + "✓ Made" button: added `className="bid-num-btn"` for `:focus-visible` ring
+    - Running tab score spans: added `fontVariantNumeric: 'tabular-nums'`
+    - Highlight strip: added `aria-live="polite"`
+    - "Final ✓" / "Live · updating" status: added `aria-live="polite"`
+  - **`/react-best-practices` audit on `ResultsEntry.jsx`** — 5 fixes:
+    - `rerender-no-inline-components`: Extracted memoized `PlayerTile` module-level component — on each tricks-taken tap, only that player's tile re-renders (was all N tiles)
+    - `js-min-max-loop` + `js-combine-iterations`: `leaderIds` — replaced `Math.max(...map)` + filter/map with single O(n) loop tracking max inline
+    - `js-combine-iterations`: `topScorers` — single loop calling `scoreFor` once per player (was 4 passes, 2× `scoreFor` per player)
+    - `js-combine-iterations`: `nilAchievers` + `nilPending` merged from 2 separate useMemos into 1 combined pass
+    - `js-flatmap-filter`: `closestCalls` `.filter().map()` → `.flatMap()`
+
+- **Session 24 (earlier)** — ResultsEntry `/frontend-design` pass + StatsModal metric cards grid:
   - **`/frontend-design` Q&A pass on `ResultsEntry.jsx`** — 4 questions revealed the core issue: the screen's focus should be entering results + watching standings update, not the trump/cards/tricks hero display. Changes made:
     - **Compact info bar** replaces 3 hero cards (~150px) — single horizontal band (~64px): trump glyph + name + flavor label · cards count · bid sum · live tricks tracker with progress bar + status label. Reference info visible without dominating.
     - **Header simplified** — leaderboard chips removed (redundant with Standings below). Header now: brand | timer + action buttons | AccountMenu only.
@@ -563,7 +579,7 @@ The preview browser (`preview_start` / `preview_screenshot`) has no Supabase ses
 - **Offline support** — defer; internet connection assumed for now
 - **Session 25 next steps** (in order):
   1. `/frontend-design` pass on `SummaryModal.jsx` — overlay purpose discussion + redesign
-  2. Run `/web-design-guidelines` + `/react-best-practices` audit on `ResultsEntry.jsx` + `StatsModal.jsx`
+  2. Run `/web-design-guidelines` + `/react-best-practices` audit on `StatsModal.jsx`
   3. Extract shared `RunningTab` + `GameHeader` components (composition cleanup)
   4. Run `/web-design-guidelines` + `/react-best-practices` + `/composition-patterns` audit on remaining screens
 - **Multi-device sessions** — each player connects on their own phone to view status and submit bids; major architecture pivot, very future
