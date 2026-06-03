@@ -603,7 +603,7 @@ The preview browser (`preview_start` / `preview_screenshot`) has no Supabase ses
 
 - **Session 26 next steps** (in order):
   1. `/frontend-design` pass on `SummaryModal.jsx` — overlay purpose discussion + redesign
-  2. Run `/web-design-guidelines` + `/react-best-practices` audit on remaining screens (`BidEntry`, `PlayingScreen`, `ResultsEntry`, `SummaryModal`)
+  2. Run `/web-design-guidelines` + `/react-best-practices` audit on `GameHeader.jsx`, `RunningTab.jsx`, and remaining screens (`BidEntry`, `PlayingScreen`, `ResultsEntry`, `SummaryModal`)
 - **Multi-device sessions** — each player connects on their own phone to view status and submit bids; major architecture pivot, very future
 - **3 of Spades rules** — scoring, round structure, and game loop to be defined and implemented
 - **Board game support** — free-form entry scoring model; specific games TBD
