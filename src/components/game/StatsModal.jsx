@@ -55,22 +55,25 @@ function ProgressionChart({ players, rounds, variant, hiddenPlayers, leader }) {
   const plotH = H - padT - padB
   const N = rounds.length
 
-  const series = players.map(p => ({
+  const series = useMemo(() => players.map(p => ({
     p,
     pts: cumulativeScoreByRound(p.id, rounds, variant),
-  }))
+  })), [players, rounds, variant])
+
+  const seriesById = useMemo(() => new Map(series.map(s => [s.p.id, s.pts])), [series])
+
+  const drawOrder = useMemo(() => [...series].sort((a, b) =>
+    a.p.id === leader?.id ? 1 : b.p.id === leader?.id ? -1 : 0,
+  ), [series, leader])
+
+  const svgRef = useRef(null)
+  const [hoverRound, setHoverRound] = useState(null)
+
   const maxY   = Math.max(...series.flatMap(s => s.pts), 10)
   const yTicks = Math.max(1, Math.ceil(maxY / 50))
 
   const xFor = n => padL + (N > 0 ? (n / N) : 0) * plotW
   const yFor = v => padT + plotH - (v / (yTicks * 50)) * plotH
-
-  const drawOrder = [...series].sort((a, b) =>
-    a.p.id === leader?.id ? 1 : b.p.id === leader?.id ? -1 : 0,
-  )
-
-  const svgRef = useRef(null)
-  const [hoverRound, setHoverRound] = useState(null)
 
   const onMove = e => {
     const svg = svgRef.current
@@ -84,13 +87,13 @@ function ProgressionChart({ players, rounds, variant, hiddenPlayers, leader }) {
   const tooltipRows = hoverRound != null
     ? players
         .filter(p => !hiddenPlayers[p.id])
-        .map(p => ({ p, total: series.find(s => s.p.id === p.id).pts[hoverRound] }))
+        .map(p => ({ p, total: seriesById.get(p.id)[hoverRound] }))
         .sort((a, b) => b.total - a.total)
     : []
   const tipLeftPct = hoverRound != null ? (xFor(hoverRound) / W) * 100 : 0
   const flipLeft   = tipLeftPct > 62
   const hovTrump   = hoverRound != null && hoverRound > 0
-    ? TRUMPS.find(t => t.id === rounds[hoverRound - 1].trump) ?? null
+    ? trumpById.get(rounds[hoverRound - 1].trump) ?? null
     : null
 
   return (
@@ -168,7 +171,7 @@ function ProgressionChart({ players, rounds, variant, hiddenPlayers, leader }) {
             <div key={row.p.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: row.p.color, display: 'inline-block', flexShrink: 0 }} />
               <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: V.ink, flex: 1 }}>{row.p.displayName}</span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: V.ink }}>{row.total}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: V.ink, fontVariantNumeric: 'tabular-nums' }}>{row.total}</span>
             </div>
           ))}
         </div>
@@ -258,22 +261,27 @@ const METRIC_CARDS = [
 
 // ── MetricCard ─────────────────────────────────────────────────────────────────
 function MetricCardInner({ card, sorted, stats }) {
-  const ranked = useMemo(() => {
-    const withData = sorted.filter(p => card.getValue(stats[p.id]) !== null)
-    const noData   = sorted.filter(p => card.getValue(stats[p.id]) === null)
-    const sortedWith = [...withData].sort((a, b) => {
-      if (card.sort === 'calibrated') {
-        return Math.abs(card.getValue(stats[a.id])) - Math.abs(card.getValue(stats[b.id]))
-      }
-      return card.getValue(stats[b.id]) - card.getValue(stats[a.id])
-    })
-    return [...sortedWith, ...noData]
+  const { ranked, vals } = useMemo(() => {
+    const vals     = new Map()
+    const withData = []
+    const noData   = []
+    for (const p of sorted) {
+      const val = card.getValue(stats[p.id])
+      vals.set(p.id, val)
+      ;(val !== null ? withData : noData).push(p)
+    }
+    withData.sort((a, b) =>
+      card.sort === 'calibrated'
+        ? Math.abs(vals.get(a.id)) - Math.abs(vals.get(b.id))
+        : vals.get(b.id) - vals.get(a.id)
+    )
+    return { ranked: [...withData, ...noData], vals }
   }, [card, sorted, stats])
 
-  const topVal = ranked.length > 0 ? card.getValue(stats[ranked[0].id]) : null
+  const topVal = ranked.length > 0 ? vals.get(ranked[0].id) : null
 
   const isLeader = p => {
-    const val = card.getValue(stats[p.id])
+    const val = vals.get(p.id)
     if (val === null || topVal === null) return false
     if (card.sort === 'calibrated') return Math.abs(Math.abs(val) - Math.abs(topVal)) < 0.05
     return val === topVal
@@ -295,7 +303,7 @@ function MetricCardInner({ card, sorted, stats }) {
         </div>
       </div>
       {ranked.map((p, i) => {
-        const val      = card.getValue(stats[p.id])
+        const val      = vals.get(p.id)
         const rendered = card.render(stats[p.id])
         const leader   = isLeader(p)
         return (
@@ -429,15 +437,22 @@ function StatsModalContent({ onClose, game, players, completedRounds }) {
 
   const accLeader = useMemo(() => {
     if (completedRounds.length === 0) return null
-    const list = players.map(p => ({ p, pct: stats[p.id].acc.pct }))
-    const maxPct = Math.max(...list.map(x => x.pct))
+    let maxPct = 0
+    for (const p of players) {
+      const pct = stats[p.id].acc.pct
+      if (pct > maxPct) maxPct = pct
+    }
     if (maxPct === 0) return null
-    return { players: list.filter(x => x.pct === maxPct).map(x => x.p), pct: maxPct }
+    return { players: players.filter(p => stats[p.id].acc.pct === maxPct), pct: maxPct }
   }, [players, stats, completedRounds.length])
 
   const streakLeaders = useMemo(() => {
-    const maxMade   = Math.max(...players.map(p => stats[p.id].streaks.madeBest))
-    const maxMissed = Math.max(...players.map(p => stats[p.id].streaks.missedBest))
+    let maxMade = 0, maxMissed = 0
+    for (const p of players) {
+      const s = stats[p.id].streaks
+      if (s.madeBest   > maxMade)   maxMade   = s.madeBest
+      if (s.missedBest > maxMissed) maxMissed = s.missedBest
+    }
     return {
       hot:        maxMade   > 0 ? players.filter(p => stats[p.id].streaks.madeBest   === maxMade)   : [],
       cold:       maxMissed > 0 ? players.filter(p => stats[p.id].streaks.missedBest === maxMissed) : [],
@@ -447,12 +462,15 @@ function StatsModalContent({ onClose, game, players, completedRounds }) {
   }, [players, stats])
 
   const titles = useMemo(() => {
-    const maxAcc    = Math.max(...players.map(p => stats[p.id].acc.pct))
-    const maxMade   = Math.max(...players.map(p => stats[p.id].streaks.madeBest))
-    const maxMissed = Math.max(...players.map(p => stats[p.id].streaks.missedBest))
-    const rList     = players.filter(p => stats[p.id].ratio !== null)
-    const maxRatio  = rList.length > 0 ? Math.max(...rList.map(p => stats[p.id].ratio)) : null
-    const maxCC     = Math.max(...players.map(p => stats[p.id].cc))
+    let maxAcc = 0, maxMade = 0, maxMissed = 0, maxRatio = null, maxCC = 0
+    for (const p of players) {
+      const ps = stats[p.id]
+      if (ps.acc.pct            > maxAcc)                              maxAcc    = ps.acc.pct
+      if (ps.streaks.madeBest   > maxMade)                             maxMade   = ps.streaks.madeBest
+      if (ps.streaks.missedBest > maxMissed)                           maxMissed = ps.streaks.missedBest
+      if (ps.ratio !== null && (maxRatio === null || ps.ratio > maxRatio)) maxRatio = ps.ratio
+      if (ps.cc                 > maxCC)                               maxCC     = ps.cc
+    }
     return {
       oracle:  maxAcc    > 0      ? players.filter(p => stats[p.id].acc.pct            === maxAcc)    : [],
       hothand: maxMade   > 0      ? players.filter(p => stats[p.id].streaks.madeBest   === maxMade)   : [],
@@ -466,10 +484,13 @@ function StatsModalContent({ onClose, game, players, completedRounds }) {
   return (
     <div
       onClick={onClose}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,21,.75)', backdropFilter: 'blur(6px)', zIndex: 100, overflowY: 'auto', padding: '40px 16px' }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,21,.75)', backdropFilter: 'blur(6px)', zIndex: 100, overflowY: 'auto', overscrollBehavior: 'contain', padding: '40px 16px' }}
     >
       <div
         onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="stats-modal-title"
         style={{ maxWidth: 760, margin: '0 auto', background: V.surface, border: `1px solid ${V.line}`, borderRadius: 24, overflow: 'hidden' }}
       >
         {/* Header */}
@@ -478,11 +499,11 @@ function StatsModalContent({ onClose, game, players, completedRounds }) {
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted }}>
               Stats · {completedRounds.length} rounds played
             </div>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24, letterSpacing: '-0.01em', color: V.ink, margin: '6px 0 0' }} translate="no">
+            <h2 id="stats-modal-title" style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24, letterSpacing: '-0.01em', color: V.ink, margin: '6px 0 0' }} translate="no">
               {game.name || 'Ka·Chu·Fu·L'}
             </h2>
           </div>
-          <button onClick={onClose} aria-label="Close stats" style={{ background: 'transparent', border: 'none', color: V.muted, fontSize: 24, cursor: 'pointer', lineHeight: 1, padding: '0 4px', touchAction: 'manipulation' }}>×</button>
+          <button onClick={onClose} aria-label="Close stats" className="stats-close-btn" style={{ background: 'transparent', border: 'none', color: V.muted, fontSize: 24, cursor: 'pointer', lineHeight: 1, padding: '0 4px', touchAction: 'manipulation' }}>×</button>
         </div>
 
         {completedRounds.length === 0 ? (
@@ -499,7 +520,7 @@ function StatsModalContent({ onClose, game, players, completedRounds }) {
                 {accLeader ? (
                   <HeroCard leftBorderColor={accLeader.players[0].color} watermark={String(accLeader.pct)}>
                     <HeroLabel>Accuracy Leader</HeroLabel>
-                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 36, color: accLeader.players[0].color, letterSpacing: '-0.04em', lineHeight: 1 }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 36, color: accLeader.players[0].color, letterSpacing: '-0.04em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
                       {accLeader.pct}%
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 4 }}>
@@ -531,10 +552,10 @@ function StatsModalContent({ onClose, game, players, completedRounds }) {
                   <HeroCard leftBorderColor={V.accent2} watermark={String(grpBid.mostChaotic.roundNumber)}>
                     <HeroLabel>Most Dramatic</HeroLabel>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted, letterSpacing: '.1em', textTransform: 'uppercase' }}>Round</div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 44, color: V.accent2, letterSpacing: '-0.05em', lineHeight: 1 }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 44, color: V.accent2, letterSpacing: '-0.05em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
                       {grpBid.mostChaotic.roundNumber}
                     </div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.accent2, marginTop: 4 }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.accent2, marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
                       {grpBid.mostChaotic.failCount}/{players.length} failed
                     </div>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, marginTop: 6 }}>
@@ -587,26 +608,26 @@ function StatsModalContent({ onClose, game, players, completedRounds }) {
               />
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
                 {sorted.map(p => (
-                  <div
+                  <button
                     key={p.id}
                     onClick={() => setHiddenPlayers(cur => ({ ...cur, [p.id]: !cur[p.id] }))}
-                    role="button"
                     aria-pressed={!!hiddenPlayers[p.id]}
                     aria-label={`${hiddenPlayers[p.id] ? 'Show' : 'Hide'} ${p.displayName}`}
+                    className="stats-player-chip"
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 5,
                       padding: '4px 10px', borderRadius: 999, cursor: 'pointer',
                       border: `1px solid ${hiddenPlayers[p.id] ? V.line : p.color}`,
                       background: hiddenPlayers[p.id] ? 'transparent' : `color-mix(in oklab, ${p.color} 15%, ${V.surface})`,
                       opacity: hiddenPlayers[p.id] ? 0.45 : 1,
-                      transition: 'all .15s ease',
+                      transition: 'border-color .15s ease, background .15s ease, opacity .15s ease',
                       touchAction: 'manipulation',
                     }}
                   >
                     <span style={{ width: 7, height: 7, borderRadius: '50%', background: p.color, display: 'inline-block', flexShrink: 0 }} />
                     <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: V.ink }}>{p.displayName}</span>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: V.muted, fontVariantNumeric: 'tabular-nums' }}>· {totals[p.id]}</span>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>

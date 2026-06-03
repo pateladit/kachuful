@@ -577,11 +577,27 @@ The preview browser (`preview_start` / `preview_screenshot`) has no Supabase ses
 - **Free Form Entry game — setup page** ✓ done Session 18
 - **Free Form Entry game — game loop** (after setup): round structure (no trump/bid mechanics); scorekeeper enters a raw score per player or per team per round; round_results.score stored directly; running totals shown; End Game same as Ka Chu Fu L
 - **Offline support** — defer; internet connection assumed for now
-- **Session 25 next steps** (in order):
+- **Session 25** — `StatsModal.jsx` audit passes (`/web-design-guidelines` + `/react-best-practices`):
+  - **`/web-design-guidelines`** — 7 fixes:
+    - `overscrollBehavior: 'contain'` on modal scroll backdrop
+    - `role="dialog"` + `aria-modal="true"` + `aria-labelledby="stats-modal-title"` on inner panel; `id` added to `<h2>`
+    - Close button: added `className="stats-close-btn"` with CSS focus-visible ring
+    - Player toggle chips: `<div role="button">` → semantic `<button className="stats-player-chip">` + CSS focus ring
+    - `transition: 'all .15s ease'` on player chips → explicit `border-color, background, opacity`
+    - `fontVariantNumeric: 'tabular-nums'` on tooltip scores, hero accuracy %, round number, failCount
+  - **`/react-best-practices`** — 7 fixes:
+    - `ProgressionChart.series`: memoized with `useMemo([players, rounds, variant])` — `cumulativeScoreByRound` no longer runs on every mouse-move hover re-render
+    - `seriesById` Map: `series.find()` O(n) scan per tooltip player → `seriesById.get()` O(1)
+    - `TRUMPS.find()` in tooltip → `trumpById.get()` (Map already imported)
+    - `MetricCardInner.ranked` useMemo: `card.getValue` called 4× per player (2 filters, sort comparisons, render, `isLeader`) → 1× via pre-computed `vals` Map; single loop partitions withData/noData; sort uses cached values
+    - `accLeader` useMemo: 4 passes (map→spread max→filter→map) → 1 loop + 1 filter
+    - `streakLeaders` useMemo: 4 passes (2× spread max, 2× filter) → 1 loop + up to 2 filters
+    - `titles` useMemo: 11 passes (5× spread max, 6× filter) → 1 loop + up to 6 filters
+
+- **Session 26 next steps** (in order):
   1. `/frontend-design` pass on `SummaryModal.jsx` — overlay purpose discussion + redesign
-  2. Run `/web-design-guidelines` + `/react-best-practices` audit on `StatsModal.jsx`
-  3. Extract shared `RunningTab` + `GameHeader` components (composition cleanup)
-  4. Run `/web-design-guidelines` + `/react-best-practices` + `/composition-patterns` audit on remaining screens
+  2. Extract shared `RunningTab` + `GameHeader` components (composition cleanup)
+  3. Run `/web-design-guidelines` + `/react-best-practices` + `/composition-patterns` audit on remaining screens
 - **Multi-device sessions** — each player connects on their own phone to view status and submit bids; major architecture pivot, very future
 - **3 of Spades rules** — scoring, round structure, and game loop to be defined and implemented
 - **Board game support** — free-form entry scoring model; specific games TBD
