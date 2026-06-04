@@ -524,9 +524,13 @@
 @media (prefers-reduced-motion: reduce) {
   .results-page,
   .results-page *,
+  .game-page,
+  .game-page *,
   .game-progress-bar,
   .game-tab-sidebar *,
   .game-content *,
+  .pause-overlay,
+  .pause-overlay *,
   .summary-modal-panel {
     transition: none !important;
     animation: none !important;

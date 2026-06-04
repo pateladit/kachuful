@@ -152,6 +152,7 @@ function PauseOverlay({ paused, onToggle, roundNumber, trump, cards, pauseMm, pa
       role="dialog"
       aria-modal="true"
       aria-label="Game paused"
+      className="pause-overlay"
       style={{
         position: 'fixed', inset: 0,
         background: 'color-mix(in oklab, var(--color-bg, #211218) 88%, black)',
@@ -288,7 +289,7 @@ export default function PlayingScreen({
   return (
     <>
       {/* ─── Page wrapper: suit-bleed background + diamond lattice ─── */}
-      <div style={{
+      <div className="game-page" style={{
         minHeight: '100vh',
         background: tint.pageBleed,
         transition: 'background 0.9s ease',

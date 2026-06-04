@@ -212,7 +212,7 @@ export default function BidEntry({
   return (
     <>
       {/* ─── Page wrapper: suit-bleed background + diamond lattice ─── */}
-      <div style={{
+      <div className="game-page" style={{
         minHeight: '100vh',
         background: tint.pageBleed,
         transition: 'background 0.9s ease',
@@ -375,7 +375,7 @@ export default function BidEntry({
             <div style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 20, padding: '20px 24px' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted }}>Bid sum vs cards</div>
               <div style={{ height: 10, background: V.bg2, borderRadius: 999, marginTop: 10, position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', inset: 0, width: `${sumBarPct}%`, background: sumBarColor, borderRadius: 999, transition: 'width .25s ease, background .25s ease' }} aria-hidden />
+                <div className="game-progress-bar" style={{ position: 'absolute', inset: 0, width: `${sumBarPct}%`, background: sumBarColor, borderRadius: 999, transition: 'width .25s ease, background .25s ease' }} aria-hidden />
               </div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 8 }}>
                 <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 48, letterSpacing: '-0.02em', lineHeight: 1, fontVariantNumeric: 'tabular-nums', color: V.ink }}>{sumOfBids}</span>
