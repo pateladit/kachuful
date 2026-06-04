@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useGame } from '../hooks/useGame'
 import Avatar from '../components/game/Avatar'
@@ -12,6 +12,7 @@ import {
   playerStreaks,
   playerAccuracy,
 } from '../lib/gameLogic'
+import { TITLE_DEFS, TITLE_BY_KEY, assignTitles } from '../lib/gameTitles'
 
 const V = {
   bg:      'var(--color-bg, #2a1620)',
@@ -403,7 +404,11 @@ export default function FinalResults() {
   const overtakeRound = completedRounds.length > 1
     ? findOvertakeRound(winner, players, completedRounds, variant)
     : 1
-  const elapsedStr = formatDuration(game.started_at, game.ended_at)
+  const elapsedStr      = formatDuration(game.started_at, game.ended_at)
+  const titleAssignment = useMemo(
+    () => assignTitles(players, completedRounds, variant),
+    [players, completedRounds, variant]
+  )
 
   function togglePlayer(pid) {
     setHiddenPlayers(cur => ({ ...cur, [pid]: !cur[pid] }))
@@ -651,6 +656,68 @@ export default function FinalResults() {
           })}
         </section>
       )}
+
+      {/* ─── Game Night Titles ─── */}
+      <section aria-label="Game night titles">
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14 }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, letterSpacing: '-0.01em', color: V.ink, margin: 0 }}>
+            Game Night Titles
+          </h2>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: V.muted }}>
+            one per player
+          </span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+          {sorted.map(p => {
+            const key = titleAssignment[p.id]
+            const def = TITLE_BY_KEY.get(key)
+            if (!def) return null
+            return (
+              <div
+                key={p.id}
+                style={{
+                  background: V.surface,
+                  border: `1px solid ${V.line}`,
+                  borderTop: `3px solid ${def.color}`,
+                  borderRadius: 14,
+                  padding: '16px 14px 14px',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  gap: 8, textAlign: 'center',
+                  position: 'relative', overflow: 'hidden',
+                }}
+              >
+                {/* Watermark icon */}
+                <div aria-hidden style={{
+                  position: 'absolute', bottom: -8, right: 2,
+                  fontSize: 64, lineHeight: 1,
+                  color: def.color, opacity: 0.06,
+                  userSelect: 'none', pointerEvents: 'none',
+                }}>{def.icon}</div>
+
+                <Avatar player={p} size={36} />
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: V.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
+                  {p.displayName}
+                </div>
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  background: `color-mix(in oklab, ${def.color} 13%, transparent)`,
+                  border: `1px solid color-mix(in oklab, ${def.color} 35%, transparent)`,
+                  borderRadius: 999, padding: '4px 10px',
+                  position: 'relative', zIndex: 1,
+                }}>
+                  <span style={{ fontSize: 10, color: def.color }} aria-hidden>{def.icon}</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, letterSpacing: '.08em', color: def.color }}>
+                    {def.label}
+                  </span>
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: V.muted, letterSpacing: '.06em', lineHeight: 1.4, position: 'relative', zIndex: 1 }}>
+                  {def.desc}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </section>
 
       {/* ─── Standings table ─── */}
       <section style={{ background: V.surface, border: `1px solid ${V.line}`, borderRadius: 20, overflow: 'hidden' }}>

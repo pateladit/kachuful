@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, memo } from 'react'
 import Avatar from './Avatar'
+import { TITLE_DEFS, computeTitleLeaderboards } from '../../lib/gameTitles'
 import {
   TRUMPS,
   trumpById,
@@ -364,55 +365,67 @@ function HeroLabel({ children }) {
   )
 }
 
-// ── Honorary titles ────────────────────────────────────────────────────────────
-function AwardPlaque({ def, holders }) {
+// ── Title leaderboard card (Titles tab) ───────────────────────────────────────
+function TitleLeaderboardCard({ def, board }) {
+  if (!board?.available) {
+    return (
+      <div style={{ background: V.bg2, border: `1px solid ${V.line}`, borderLeft: `3px solid ${V.line}`, borderRadius: 10, padding: '12px 14px', opacity: 0.45 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 12 }} aria-hidden>{def.icon}</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 12, color: V.muted }}>{def.label}</span>
+        </div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted, marginTop: 4 }}>Not enough rounds</div>
+      </div>
+    )
+  }
   return (
-    <div style={{ background: V.bg2, border: `1px solid ${V.line}`, borderLeft: `4px solid ${def.color}`, borderRadius: 10, padding: '14px 16px', position: 'relative', overflow: 'hidden' }}>
-      <div aria-hidden="true" style={{ position: 'absolute', right: 4, bottom: -12, fontSize: 76, color: def.color, opacity: 0.07, lineHeight: 1, userSelect: 'none', pointerEvents: 'none' }}>
-        {def.icon}
-      </div>
-      <div style={{ position: 'relative', zIndex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-          <span style={{ fontSize: 13, lineHeight: 1 }} aria-hidden="true">{def.icon}</span>
-          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: def.color }}>{def.label}</span>
+    <div style={{ background: V.bg2, border: `1px solid ${V.line}`, borderLeft: `3px solid ${def.color}`, borderRadius: 10, overflow: 'hidden' }}>
+      <div style={{ padding: '11px 14px 9px', borderBottom: `1px solid ${V.line}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 12, lineHeight: 1, color: def.color }} aria-hidden>{def.icon}</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 12, color: def.color }}>{def.label}</span>
         </div>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted, marginBottom: 9 }}>{def.desc}</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          {holders.map(p => (
-            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: p.color, flexShrink: 0 }} />
-              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13, color: V.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {p.displayName}
-              </span>
-            </div>
-          ))}
-        </div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: V.muted, marginTop: 3, letterSpacing: '.06em' }}>{def.desc}</div>
       </div>
+      {board.rows.map((row, i) => (
+        <div
+          key={row.player.id}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 7,
+            padding: '7px 14px',
+            borderBottom: i < board.rows.length - 1 ? `1px solid ${V.line}` : 'none',
+            background: row.isWinner ? `color-mix(in oklab, ${def.color} 9%, transparent)` : 'transparent',
+          }}
+        >
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.muted, width: 12, flexShrink: 0, textAlign: 'right' }}>{i + 1}</span>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: row.player.color, flexShrink: 0 }} />
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: row.isWinner ? 700 : 600, fontSize: 12, color: row.isWinner ? def.color : V.ink, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {row.player.displayName}
+          </span>
+          {row.isWinner ? <span style={{ fontSize: 8, color: def.color }} aria-hidden>★</span> : null}
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: row.isWinner ? 700 : 500, color: row.isWinner ? def.color : V.ink2, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+            {row.label}
+          </span>
+        </div>
+      ))}
     </div>
   )
 }
 
-const TITLE_DEFS = [
-  { key: 'oracle',  icon: '◎', label: 'The Oracle',   desc: 'Highest accuracy',       color: V.accent3 },
-  { key: 'hothand', icon: '🔥', label: 'Hot Hand',     desc: 'Longest made streak',    color: V.accent3 },
-  { key: 'icecold', icon: '❄',  label: 'Ice Cold',     desc: 'Longest miss streak',    color: V.accent2 },
-  { key: 'gambler', icon: '◈',  label: 'The Gambler',  desc: 'Most aggressive bidder', color: V.accent  },
-  { key: 'nil',     icon: '○',  label: 'Nil Achiever', desc: 'Bid zero · held zero',   color: V.accent3 },
-  { key: 'closest', icon: '±',  label: 'Closest Call', desc: 'Most one-trick misses',  color: V.accent  },
-]
-
 // ── Main modal content ─────────────────────────────────────────────────────────
 function StatsModalContent({ onClose, game, players, completedRounds }) {
   const [hiddenPlayers, setHiddenPlayers] = useState({})
+
+  const variant    = game.scoring_variant
+  const isComplete = game.status === 'complete'
+
+  const [activeTab, setActiveTab] = useState(isComplete ? 'titles' : 'stats')
 
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
-
-  const variant    = game.scoring_variant
-  const isComplete = game.status === 'complete'
 
   const totals = useMemo(() => computeTotals(players, completedRounds, variant), [players, completedRounds, variant])
   const sorted = useMemo(() => [...players].sort((a, b) => totals[b.id] - totals[a.id]), [players, totals])
@@ -461,25 +474,10 @@ function StatsModalContent({ onClose, game, players, completedRounds }) {
     }
   }, [players, stats])
 
-  const titles = useMemo(() => {
-    let maxAcc = 0, maxMade = 0, maxMissed = 0, maxRatio = null, maxCC = 0
-    for (const p of players) {
-      const ps = stats[p.id]
-      if (ps.acc.pct            > maxAcc)                              maxAcc    = ps.acc.pct
-      if (ps.streaks.madeBest   > maxMade)                             maxMade   = ps.streaks.madeBest
-      if (ps.streaks.missedBest > maxMissed)                           maxMissed = ps.streaks.missedBest
-      if (ps.ratio !== null && (maxRatio === null || ps.ratio > maxRatio)) maxRatio = ps.ratio
-      if (ps.cc                 > maxCC)                               maxCC     = ps.cc
-    }
-    return {
-      oracle:  maxAcc    > 0      ? players.filter(p => stats[p.id].acc.pct            === maxAcc)    : [],
-      hothand: maxMade   > 0      ? players.filter(p => stats[p.id].streaks.madeBest   === maxMade)   : [],
-      icecold: maxMissed > 0      ? players.filter(p => stats[p.id].streaks.missedBest === maxMissed) : [],
-      gambler: maxRatio !== null  ? players.filter(p => stats[p.id].ratio              === maxRatio)  : [],
-      nil:     players.filter(p => stats[p.id].nil.overall.made > 0),
-      closest: maxCC    > 0       ? players.filter(p => stats[p.id].cc                === maxCC)     : [],
-    }
-  }, [players, stats])
+  const titleBoards = useMemo(
+    () => isComplete ? computeTitleLeaderboards(players, completedRounds, variant) : {},
+    [isComplete, players, completedRounds, variant]
+  )
 
   return (
     <div
@@ -506,9 +504,41 @@ function StatsModalContent({ onClose, game, players, completedRounds }) {
           <button onClick={onClose} aria-label="Close stats" className="stats-close-btn" style={{ background: 'transparent', border: 'none', color: V.muted, fontSize: 24, cursor: 'pointer', lineHeight: 1, padding: '0 4px', touchAction: 'manipulation' }}>×</button>
         </div>
 
+        {/* ── Tab bar — shown only when game is complete ── */}
+        {isComplete && completedRounds.length > 0 ? (
+          <div style={{ display: 'flex', borderBottom: `1px solid ${V.line}`, padding: '0 28px', gap: 4 }}>
+            {[{ key: 'titles', label: '★ Titles' }, { key: 'stats', label: '◎ Stats' }].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                style={{
+                  background: 'none', border: 'none', borderBottom: `2px solid ${activeTab === tab.key ? V.accent : 'transparent'}`,
+                  padding: '11px 0', marginRight: 20, cursor: 'pointer',
+                  fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase',
+                  color: activeTab === tab.key ? V.accent : V.muted,
+                  transition: 'color .15s ease, border-color .15s ease',
+                  touchAction: 'manipulation',
+                }}
+              >{tab.label}</button>
+            ))}
+          </div>
+        ) : null}
+
         {completedRounds.length === 0 ? (
           <div style={{ padding: '40px 28px', textAlign: 'center', color: V.muted, fontFamily: 'var(--font-mono)', fontSize: 12 }}>
             No completed rounds yet
+          </div>
+        ) : activeTab === 'titles' ? (
+          /* ── Titles tab ── */
+          <div style={{ padding: '20px 24px' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase', color: V.muted, marginBottom: 14 }}>
+              Where everyone stood · {completedRounds.length} rounds
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 8 }}>
+              {TITLE_DEFS.filter(d => d.key !== 'woodenspoon' && d.key !== 'averagejoe').map(def => (
+                <TitleLeaderboardCard key={def.key} def={def} board={titleBoards[def.key]} />
+              ))}
+            </div>
           </div>
         ) : (
           <>
@@ -646,21 +676,6 @@ function StatsModalContent({ onClose, game, players, completedRounds }) {
               </div>
             </div>
 
-            {/* ── Honorary Titles — end-game only ── */}
-            {isComplete ? (
-              <div style={{ padding: '20px 28px' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: V.muted, marginBottom: 12 }}>
-                  Honorary Titles
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-                  {TITLE_DEFS.map(def => {
-                    const holders = titles[def.key]
-                    if (!holders || holders.length === 0) return null
-                    return <AwardPlaque key={def.key} def={def} holders={holders} />
-                  })}
-                </div>
-              </div>
-            ) : null}
           </>
         )}
       </div>

@@ -281,6 +281,25 @@ export function netBidDrift(playerId, rounds) {
   return count > 0 ? total / count : null
 }
 
+// Rank change for all players from mid-game (N/2 rounds) to end.
+// Returns { [playerId]: change } where positive = improved rank.
+// Returns null if rounds.length < 4.
+export function allMidGameRankChanges(players, rounds, variant) {
+  if (rounds.length < 4) return null
+  const mid      = Math.floor(rounds.length / 2)
+  const midTotals = computeTotals(players, rounds.slice(0, mid), variant)
+  const endTotals = computeTotals(players, rounds, variant)
+  const midRanks  = computeRanks(players, midTotals)
+  const endRanks  = computeRanks(players, endTotals)
+  const result = {}
+  for (const p of players) {
+    const mRank = midRanks[p.id]?.rank ?? players.length
+    const eRank = endRanks[p.id]?.rank ?? players.length
+    result[p.id] = mRank - eRank // positive = climbed the table
+  }
+  return result
+}
+
 // Count of completed rounds where the player missed by exactly 1 trick.
 export function closestCallCount(playerId, rounds) {
   let count = 0

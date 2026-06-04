@@ -238,6 +238,8 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
 - **S24**: StatsModal → 12 metric cards grid (METRIC_CARDS/MetricCard); ResultsEntry /frontend-design (compact info bar, 2-col tiles, highlight strip, standings primary); full audit fixes
 - **S25**: StatsModal audit (7 web + 7 react fixes); GameHeader + RunningTab extracted as shared components; formatRank/rankBg moved to gameColors.js; ~400 lines removed from callers
 - **S26**: SummaryModal /frontend-design (leader hero with watermark, standings section, Felt Table panel)
+- **S27**: BidEntry + PlayingScreen /web-design-guidelines audit; GameHeader + RunningTab /react-best-practices (pass)
+- **S28**: /react-best-practices on BidEntry/PlayingScreen/ResultsEntry (useCallback for RunningTab memo props); /composition-patterns all three (pass); HoldToEndButton (hold-to-confirm 1.2s ring, BidEntry + ResultsEntry); GameOverSplash centered; podium redesign (tall portrait cards, player-color gradient wash, rank numeral watermark, staggered animations); `gameTitles.js` — 12 merit titles + 2 fallbacks, `assignTitles` (random greedy bipartite, 100 iterations), `computeTitleLeaderboards`; StatsModal Titles/Stats tab system (Titles tab opens first on complete games); FinalResults "Game Night Titles" section; `allMidGameRankChanges` added to gameLogic.js
 
 ## Tooling & Workflow
 
@@ -259,6 +261,15 @@ Applied to all game screens (BidEntry, PlayingScreen, ResultsEntry) and modals:
 - **Player-color**: bid buttons fill in player's personal color; bids in running tab shown in player's color
 - All implemented via `gameColors.js` (`trumpTint`) + per-screen inline styles
 
+### Honorary Titles System (`src/lib/gameTitles.js`)
+
+12 merit titles + 2 fallbacks. Key exports:
+- `TITLE_DEFS` / `TITLE_BY_KEY` — display metadata (icon, color, desc) for all 14 titles
+- `assignTitles(players, completedRounds, variant)` → `{ [playerId]: titleKey }` — random greedy bipartite matching (100 iterations), every player gets exactly one unique merit title if possible; fallbacks: `woodenspoon` (last place) or `averagejoe`
+- `computeTitleLeaderboards(players, completedRounds, variant)` → per-title ranked lists for StatsModal Titles tab
+
+Merit titles: oracle (accuracy), hothand (made streak), nil (nil holds), gambler (high bid ratio), miser (low bid ratio), peak (single-round score), closest (±1 misses), comeback (positions gained N/2→end, requires ≥4 rounds), fader (positions lost, requires ≥4 rounds), icecold (miss streak), philosopher (avg bid−took positive), darkhorse (avg took−bid positive).
+
 ### Running Tab Layout
 Breakpoint: **1100px viewport**. Above: sticky right sidebar (~380px), spotlight/entry takes left column. Below: stacks. Round column `position: sticky; left: 0`. Implemented via `.game-content` + `.game-tab-sidebar` CSS classes in `index.css`.
 
@@ -269,15 +280,16 @@ Breakpoint: **1100px viewport**. Above: sticky right sidebar (~380px), spotlight
 | `BidEntry.jsx` | ✓ Done S28 — Felt Table + /web-design-guidelines + /react-best-practices + /composition-patterns (pass) |
 | `PlayingScreen.jsx` | ✓ Done S28 — Felt Table + /web-design-guidelines + /react-best-practices + /composition-patterns (pass) |
 | `ResultsEntry.jsx` | ✓ Done S28 — Felt Table + /frontend-design + /react-best-practices + /composition-patterns (pass) |
-| `StatsModal.jsx` | ✓ Done S24/S25 — /frontend-design (12 metric cards) + full audit |
+| `StatsModal.jsx` | ✓ Done S28 — /frontend-design (12 metric cards) + Titles/Stats tab system + leaderboard cards per title |
 | `SummaryModal.jsx` | ✓ Done S26/S27 — /frontend-design + /web-design-guidelines + /react-best-practices |
 | `GameHeader.jsx` | ✓ Done S25/S27 — extracted + /web-design-guidelines + /react-best-practices (pass) |
 | `RunningTab.jsx` | ✓ Done S25/S27 — extracted + /web-design-guidelines + /react-best-practices |
 
 ## Deferred / Future
 
-### Session 28 Next Steps
-- All game screen audits complete. See Backlog for remaining work.
+### Session 29 Next Steps
+- `/frontend-design` pass on the "Game Night Titles" section in FinalResults (currently functional, needs visual polish)
+- Free Form Entry game loop (highest priority backlog item)
 
 ### Backlog
 - **Free Form Entry game loop** — round structure (no trump/bid mechanics); scorekeeper enters raw score per player/team per round; round_results.score stored directly; running totals; End Game same as Ka Chu Fu L
