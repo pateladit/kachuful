@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import Avatar from './Avatar'
 import { trumpById, scoreFor } from '../../lib/gameLogic'
 import { formatRank, rankBg } from '../../lib/gameColors'
@@ -14,7 +15,14 @@ const V = {
   accent3: 'var(--color-accent-3, #b6c97a)',
 }
 
-export default function RunningTab({
+const LEGEND = (
+  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, flexShrink: 0 }}>
+    <span aria-hidden style={{ color: V.accent3 }}>●</span> made&nbsp;
+    <span aria-hidden style={{ color: V.accent2 }}>●</span> missed
+  </div>
+)
+
+export default memo(function RunningTab({
   players,
   completedRounds,
   tabRounds,
@@ -42,10 +50,7 @@ export default function RunningTab({
             {completedRounds.length} of {completedRounds.length + 1} rounds
           </small>
         </h2>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: V.muted, flexShrink: 0 }}>
-          <span aria-hidden style={{ color: V.accent3 }}>●</span> made&nbsp;
-          <span aria-hidden style={{ color: V.accent2 }}>●</span> missed
-        </div>
+        {LEGEND}
       </div>
 
       <div style={{ borderTop: `1px solid ${V.line}`, overflowX: 'auto' }}>
@@ -153,4 +158,4 @@ export default function RunningTab({
       ) : null}
     </section>
   )
-}
+})
