@@ -270,16 +270,15 @@ Breakpoint: **1100px viewport**. Above: sticky right sidebar (~380px), spotlight
 | `PlayingScreen.jsx` | ✓ Done S21 — Felt Table + full audit |
 | `ResultsEntry.jsx` | ✓ Done S24 — Felt Table + /frontend-design + full audit |
 | `StatsModal.jsx` | ✓ Done S24/S25 — /frontend-design (12 metric cards) + full audit |
-| `SummaryModal.jsx` | /frontend-design ✓ (S26). `/web-design-guidelines` ✓ (S27). Pending: `/react-best-practices` audit |
+| `SummaryModal.jsx` | ✓ Done S26/S27 — /frontend-design + /web-design-guidelines + /react-best-practices |
 | `GameHeader.jsx` | ✓ Extracted S25. Pending: `/web-design-guidelines` + `/react-best-practices` audit (S27) |
 | `RunningTab.jsx` | ✓ Extracted S25. Pending: `/web-design-guidelines` + `/react-best-practices` audit (S27) |
 
 ## Deferred / Future
 
 ### Session 27 Next Steps (in order)
-1. `/react-best-practices` audit on `SummaryModal.jsx`
-2. `/web-design-guidelines` + `/react-best-practices` audit on `GameHeader.jsx` + `RunningTab.jsx`
-3. `/web-design-guidelines` + `/react-best-practices` + `/composition-patterns` on `BidEntry.jsx`, `PlayingScreen.jsx`, `ResultsEntry.jsx`
+1. `/web-design-guidelines` + `/react-best-practices` audit on `GameHeader.jsx` + `RunningTab.jsx`
+2. `/web-design-guidelines` + `/react-best-practices` + `/composition-patterns` on `BidEntry.jsx`, `PlayingScreen.jsx`, `ResultsEntry.jsx`
 
 ### Backlog
 - **Free Form Entry game loop** — round structure (no trump/bid mechanics); scorekeeper enters raw score per player/team per round; round_results.score stored directly; running totals; End Game same as Ka Chu Fu L
