@@ -59,13 +59,16 @@ export default function SummaryModal({
   const variant    = game.scoring_variant
   const totals     = computeTotals(players, completedRounds, variant)
   const ranks      = computeRanks(players, totals)
-  const sorted     = [...players].sort((a, b) => totals[b.id] - totals[a.id])
+  const sorted     = players.toSorted((a, b) => totals[b.id] - totals[a.id])
   const leader     = sorted[0]
   const second     = sorted[1]
   const margin     = leader && second ? totals[leader.id] - totals[second.id] : 0
-  const totalScores = players.map(p => totals[p.id])
-  const minTotal   = Math.min(...totalScores)
-  const maxTotal   = Math.max(...totalScores)
+  let minTotal = Infinity, maxTotal = -Infinity
+  for (const p of players) {
+    const s = totals[p.id]
+    if (s < minTotal) minTotal = s
+    if (s > maxTotal) maxTotal = s
+  }
 
   const currentTrump = trumpById.get(pendingRound?.trump)
   const tint         = trumpTint(currentTrump)
