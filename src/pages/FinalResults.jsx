@@ -659,16 +659,23 @@ export default function FinalResults() {
 
       {/* ─── Game Night Titles ─── */}
       <section aria-label="Game night titles">
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14 }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, letterSpacing: '-0.01em', color: V.ink, margin: 0 }}>
-            Game Night Titles
-          </h2>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: V.muted }}>
-            one per player
-          </span>
+
+        {/* Ceremonial section header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+          <div style={{ flex: 1, height: 1, background: `linear-gradient(to right, transparent, ${V.line})` }} />
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+            <span aria-hidden style={{ color: V.accent, fontSize: 9 }}>★</span>
+            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 10, letterSpacing: '.22em', textTransform: 'uppercase', color: V.accent }}>
+              Game Night Titles
+            </span>
+            <span aria-hidden style={{ color: V.accent, fontSize: 9 }}>★</span>
+          </div>
+          <div style={{ flex: 1, height: 1, background: `linear-gradient(to left, transparent, ${V.line})` }} />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
-          {sorted.map(p => {
+
+        {/* Award cards — centred flex wrap, playing-card proportions */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12 }}>
+          {sorted.map((p, i) => {
             const key = titleAssignment[p.id]
             const def = TITLE_BY_KEY.get(key)
             if (!def) return null
@@ -676,42 +683,81 @@ export default function FinalResults() {
               <div
                 key={p.id}
                 style={{
-                  background: V.surface,
-                  border: `1px solid ${V.line}`,
-                  borderTop: `3px solid ${def.color}`,
-                  borderRadius: 14,
-                  padding: '16px 14px 14px',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  gap: 8, textAlign: 'center',
-                  position: 'relative', overflow: 'hidden',
+                  position: 'relative',
+                  width: 148,
+                  borderRadius: 16,
+                  overflow: 'hidden',
+                  background: `
+                    radial-gradient(ellipse at 50% 38%, color-mix(in oklab, ${def.color} 9%, transparent) 0%, transparent 60%),
+                    color-mix(in oklab, ${p.color} 9%, ${V.surface})
+                  `,
+                  border: `1px solid color-mix(in oklab, ${p.color} 30%, ${V.line})`,
+                  boxShadow: `0 4px 18px -6px color-mix(in oklab, ${p.color} 22%, transparent)`,
+                  display: 'flex', flexDirection: 'column',
+                  animation: `stat-rise 0.4s ease ${i * 55}ms both`,
                 }}
               >
-                {/* Watermark icon */}
-                <div aria-hidden style={{
-                  position: 'absolute', bottom: -8, right: 2,
-                  fontSize: 64, lineHeight: 1,
-                  color: def.color, opacity: 0.06,
-                  userSelect: 'none', pointerEvents: 'none',
-                }}>{def.icon}</div>
+                {/* Title-colour cap */}
+                <div style={{ height: 3, background: def.color, flexShrink: 0 }} />
 
-                <Avatar player={p} size={36} />
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: V.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
-                  {p.displayName}
-                </div>
+                {/* Icon + avatar zone */}
                 <div style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  background: `color-mix(in oklab, ${def.color} 13%, transparent)`,
-                  border: `1px solid color-mix(in oklab, ${def.color} 35%, transparent)`,
-                  borderRadius: 999, padding: '4px 10px',
-                  position: 'relative', zIndex: 1,
+                  position: 'relative',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  padding: '20px 12px 0',
                 }}>
-                  <span style={{ fontSize: 10, color: def.color }} aria-hidden>{def.icon}</span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, letterSpacing: '.08em', color: def.color }}>
-                    {def.label}
-                  </span>
+                  {/* Giant watermark — centred behind everything */}
+                  <div aria-hidden style={{
+                    position: 'absolute', top: -4, left: '50%',
+                    transform: 'translateX(-50%)',
+                    fontFamily: 'var(--font-display)', fontWeight: 700,
+                    fontSize: 118, lineHeight: 1,
+                    color: def.color, opacity: 0.055,
+                    userSelect: 'none', pointerEvents: 'none',
+                  }}>{def.icon}</div>
+
+                  {/* Foreground icon with glow */}
+                  <div style={{
+                    fontSize: 30, lineHeight: 1,
+                    color: def.color,
+                    position: 'relative', zIndex: 1,
+                    marginBottom: 14,
+                    textShadow: `0 0 14px color-mix(in oklab, ${def.color} 55%, transparent)`,
+                  }} aria-hidden>{def.icon}</div>
+
+                  {/* Avatar in player-colour ring */}
+                  <div style={{
+                    position: 'relative', zIndex: 1,
+                    padding: 3, borderRadius: '50%',
+                    background: `color-mix(in oklab, ${p.color} 28%, transparent)`,
+                    boxShadow: `0 0 0 1px color-mix(in oklab, ${p.color} 55%, transparent)`,
+                  }}>
+                    <Avatar player={p} size={44} />
+                  </div>
                 </div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: V.muted, letterSpacing: '.06em', lineHeight: 1.4, position: 'relative', zIndex: 1 }}>
-                  {def.desc}
+
+                {/* Text footer */}
+                <div style={{
+                  padding: '10px 12px 16px',
+                  textAlign: 'center',
+                  marginTop: 10,
+                  borderTop: `1px solid color-mix(in oklab, ${p.color} 18%, ${V.line})`,
+                }}>
+                  <div style={{
+                    fontFamily: 'var(--font-mono)', fontWeight: 700,
+                    fontSize: 9, letterSpacing: '.16em', textTransform: 'uppercase',
+                    color: def.color, marginBottom: 5,
+                  }}>{def.label}</div>
+                  <div style={{
+                    fontFamily: 'var(--font-display)', fontWeight: 700,
+                    fontSize: 14, letterSpacing: '-0.01em', color: V.ink,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>{p.displayName}</div>
+                  <div style={{
+                    fontFamily: 'var(--font-mono)', fontSize: 8,
+                    color: V.muted, marginTop: 6,
+                    letterSpacing: '.05em', lineHeight: 1.5,
+                  }}>{def.desc}</div>
                 </div>
               </div>
             )

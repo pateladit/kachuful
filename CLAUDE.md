@@ -239,7 +239,7 @@ Admin access: run `UPDATE public.profiles SET is_admin = true WHERE id = '<uuid>
 - **S25**: StatsModal audit (7 web + 7 react fixes); GameHeader + RunningTab extracted as shared components; formatRank/rankBg moved to gameColors.js; ~400 lines removed from callers
 - **S26**: SummaryModal /frontend-design (leader hero with watermark, standings section, Felt Table panel)
 - **S27**: BidEntry + PlayingScreen /web-design-guidelines audit; GameHeader + RunningTab /react-best-practices (pass)
-- **S28**: /react-best-practices on BidEntry/PlayingScreen/ResultsEntry (useCallback for RunningTab memo props); /composition-patterns all three (pass); HoldToEndButton (hold-to-confirm 1.2s ring, BidEntry + ResultsEntry); GameOverSplash centered; podium redesign (tall portrait cards, player-color gradient wash, rank numeral watermark, staggered animations); `gameTitles.js` — 12 merit titles + 2 fallbacks, `assignTitles` (random greedy bipartite, 100 iterations), `computeTitleLeaderboards`; StatsModal Titles/Stats tab system (Titles tab opens first on complete games); FinalResults "Game Night Titles" section; `allMidGameRankChanges` added to gameLogic.js
+- **S28**: /react-best-practices on BidEntry/PlayingScreen/ResultsEntry (useCallback for RunningTab memo props); /composition-patterns all three (pass); HoldToEndButton (hold-to-confirm 1.2s ring, BidEntry + ResultsEntry); GameOverSplash centered; podium redesign (tall portrait cards, player-color gradient wash, rank numeral watermark, staggered animations); `gameTitles.js` — 12 merit titles + 2 fallbacks, `assignTitles` (random greedy bipartite, 100 iterations), `computeTitleLeaderboards`; StatsModal Titles/Stats tab system (Titles tab opens first on complete games); FinalResults "Game Night Titles" section — /frontend-design (playing-card portrait cards, dual-layer background, watermark icon + glow, player-color avatar ring, staggered stat-rise, ceremonial ★ divider header)
 
 ## Tooling & Workflow
 
@@ -288,7 +288,6 @@ Breakpoint: **1100px viewport**. Above: sticky right sidebar (~380px), spotlight
 ## Deferred / Future
 
 ### Session 29 Next Steps
-- `/frontend-design` pass on the "Game Night Titles" section in FinalResults (currently functional, needs visual polish)
 - Free Form Entry game loop (highest priority backlog item)
 
 ### Backlog
