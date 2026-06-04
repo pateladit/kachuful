@@ -280,6 +280,47 @@ export default function PlayingScreen({
 
   const tint = trumpTint(trump)
 
+  const handleToggleExpand = useCallback(() => setExpanded(e => !e), [])
+
+  const totalCellColor = useCallback(
+    p => totalColor(totals[p.id], minTotal, maxTotal),
+    [totals, minTotal, maxTotal]
+  )
+
+  const renderTotal = useCallback(
+    p => <AnimatedTotal value={totals[p.id]} />,
+    [totals]
+  )
+
+  const renderCurrentRound = useCallback(() => (
+    <tr>
+      <td
+        className="game-tab-round-cell"
+        style={{ textAlign: 'left', padding: '7px 6px 7px 14px', borderBottom: `1px solid ${V.line}`, borderRight: `1px solid ${V.line}`, fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 12, color: V.accent, background: `color-mix(in oklab, ${V.accent} 6%, ${V.bg2})` }}
+      >
+        R{roundNumber}
+        <span aria-hidden style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.accent, opacity: .65, marginLeft: 3 }}>{trump?.glyph}</span>
+      </td>
+      {players.map((p, pi) => {
+        const bid = pendingRound?.bids[p.id]
+        return (
+          <td key={p.id} style={{ padding: '7px 4px', textAlign: 'center', borderBottom: `1px solid ${V.line}`, borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none', background: `color-mix(in oklab, ${V.accent} 8%, transparent)` }}>
+            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1 }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, letterSpacing: '-0.02em', color: bid === 0 ? V.accent3 : V.ink }}>
+                {bid ?? '—'}
+              </span>
+              <span
+                aria-hidden
+                className="live-dot"
+                style={{ width: 5, height: 5, borderRadius: '50%', background: V.accent, marginTop: 3, display: 'block' }}
+              />
+            </div>
+          </td>
+        )
+      })}
+    </tr>
+  ), [roundNumber, trump, players, pendingRound])
+
   const handleEndGame = useCallback(async () => {
     setSummaryOpen(false)
     setStatsOpen(false)
@@ -495,37 +536,10 @@ export default function PlayingScreen({
               ranks={ranks}
               leaderIds={leaderIds}
               expanded={expanded}
-              onToggleExpand={() => setExpanded(e => !e)}
-              totalCellColor={p => totalColor(totals[p.id], minTotal, maxTotal)}
-              renderTotal={p => <AnimatedTotal value={totals[p.id]} />}
-              renderCurrentRound={() => (
-                <tr>
-                  <td
-                    className="game-tab-round-cell"
-                    style={{ textAlign: 'left', padding: '7px 6px 7px 14px', borderBottom: `1px solid ${V.line}`, borderRight: `1px solid ${V.line}`, fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 12, color: V.accent, background: `color-mix(in oklab, ${V.accent} 6%, ${V.bg2})` }}
-                  >
-                    R{roundNumber}
-                    <span aria-hidden style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.accent, opacity: .65, marginLeft: 3 }}>{trump?.glyph}</span>
-                  </td>
-                  {players.map((p, pi) => {
-                    const bid = pendingRound?.bids[p.id]
-                    return (
-                      <td key={p.id} style={{ padding: '7px 4px', textAlign: 'center', borderBottom: `1px solid ${V.line}`, borderRight: pi < players.length - 1 ? `1px solid ${V.line}` : 'none', background: `color-mix(in oklab, ${V.accent} 8%, transparent)` }}>
-                        <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1 }}>
-                          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, letterSpacing: '-0.02em', color: bid === 0 ? V.accent3 : V.ink }}>
-                            {bid ?? '—'}
-                          </span>
-                          <span
-                            aria-hidden
-                            className="live-dot"
-                            style={{ width: 5, height: 5, borderRadius: '50%', background: V.accent, marginTop: 3, display: 'block' }}
-                          />
-                        </div>
-                      </td>
-                    )
-                  })}
-                </tr>
-              )}
+              onToggleExpand={handleToggleExpand}
+              totalCellColor={totalCellColor}
+              renderTotal={renderTotal}
+              renderCurrentRound={renderCurrentRound}
             />
           </div>
 
