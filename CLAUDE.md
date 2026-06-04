@@ -266,9 +266,9 @@ Breakpoint: **1100px viewport**. Above: sticky right sidebar (~380px), spotlight
 
 | Screen | Status |
 |--------|--------|
-| `BidEntry.jsx` | Felt Table ✓ (S20). Pending: `/web-design-guidelines` + `/react-best-practices` + `/composition-patterns` audit (S27) |
-| `PlayingScreen.jsx` | ✓ Done S21 — Felt Table + full audit |
-| `ResultsEntry.jsx` | ✓ Done S24 — Felt Table + /frontend-design + full audit |
+| `BidEntry.jsx` | Felt Table ✓ (S20). `/web-design-guidelines` ✓ (S27). Pending: `/react-best-practices` + `/composition-patterns` |
+| `PlayingScreen.jsx` | ✓ S21 Felt Table + audit. `/web-design-guidelines` re-audit ✓ (S27). Pending: `/react-best-practices` + `/composition-patterns` |
+| `ResultsEntry.jsx` | ✓ Done S24 — Felt Table + /frontend-design + full audit. Pending: `/react-best-practices` + `/composition-patterns` (S27) |
 | `StatsModal.jsx` | ✓ Done S24/S25 — /frontend-design (12 metric cards) + full audit |
 | `SummaryModal.jsx` | ✓ Done S26/S27 — /frontend-design + /web-design-guidelines + /react-best-practices |
 | `GameHeader.jsx` | ✓ Done S25/S27 — extracted + /web-design-guidelines + /react-best-practices (pass) |
@@ -277,7 +277,7 @@ Breakpoint: **1100px viewport**. Above: sticky right sidebar (~380px), spotlight
 ## Deferred / Future
 
 ### Session 27 Next Steps (in order)
-1. `/web-design-guidelines` + `/react-best-practices` + `/composition-patterns` on `BidEntry.jsx`, `PlayingScreen.jsx`, `ResultsEntry.jsx`
+1. `/react-best-practices` + `/composition-patterns` on `BidEntry.jsx`, `PlayingScreen.jsx`, `ResultsEntry.jsx`
 
 ### Backlog
 - **Free Form Entry game loop** — round structure (no trump/bid mechanics); scorekeeper enters raw score per player/team per round; round_results.score stored directly; running totals; End Game same as Ka Chu Fu L
