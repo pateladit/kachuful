@@ -7,6 +7,7 @@ import { trumpById, computeTotals, computeRanks, scoreFor } from '../../lib/game
 import { trumpTint } from '../../lib/gameColors'
 import GameHeader from './GameHeader'
 import RunningTab from './RunningTab'
+import HoldToEndButton from './HoldToEndButton'
 
 const V = {
   bg:      'var(--color-bg, #211218)',
@@ -326,6 +327,7 @@ export default function BidEntry({
               <span aria-hidden style={{ fontSize: 13 }}>⊞</span>
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 600 }}>Stats</span>
             </button>
+            <HoldToEndButton onEndGame={handleEndGame} />
           </GameHeader>
 
           {/* ─── Hero: 3 info cards ─── */}

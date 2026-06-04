@@ -86,7 +86,7 @@ function GameOverSplash({ winner, score, margin, onDone }) {
     ({ animation: `${name} ${dur} ${ease} ${delay}ms both` })
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--color-bg)', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--color-bg)', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
 
       {/* Ghost score watermark */}
       <div aria-hidden style={{ position: 'absolute', right: '-0.05em', bottom: '-0.12em', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 'min(48vw, 400px)', lineHeight: 1, color: wc, opacity: 0.05, userSelect: 'none', pointerEvents: 'none' }} />
@@ -98,7 +98,7 @@ function GameOverSplash({ winner, score, margin, onDone }) {
       <div aria-hidden style={{ position: 'absolute', left: 28, top: '50%', transform: 'translateY(-50%)', width: 2, height: '38%', background: `linear-gradient(to bottom, transparent, ${wc}, transparent)`, animation: 'curtain-rise 0.7s ease 300ms both' }} />
 
       {/* Content */}
-      <div style={{ position: 'relative', zIndex: 2, padding: '0 56px 0 72px', maxWidth: 760, width: '100%' }}>
+      <div style={{ position: 'relative', zIndex: 2, padding: '0 56px', maxWidth: 760, width: '100%' }}>
 
         {/* Label */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32, animation: 'slide-from-left 0.5s ease 150ms both' }}>

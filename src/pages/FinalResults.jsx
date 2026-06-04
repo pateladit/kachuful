@@ -431,12 +431,14 @@ export default function FinalResults() {
     a.click()
   }
 
-  // Podium order: 2nd | 1st | 3rd (centre = tallest block)
+  // Podium order: 2nd | 1st | 3rd (centre = tallest)
   const podiumOrder = sorted.length >= 3
     ? [sorted[1], sorted[0], sorted[2]]
-    : [sorted[0], sorted[1]]
-  const podiumBlockH = [90, 120, 70]  // indices: 0=2nd, 1=1st, 2=3rd
-  const podiumMedals = ['🥈', '🥇', '🥉']
+    : sorted.slice(0, 2)
+  // rank label, card height, content entrance delay
+  const podiumRank   = [2, 1, 3]
+  const podiumCardH  = [260, 340, 210]
+  const podiumDelay  = [350, 80, 550]
 
   return (
     <div
@@ -549,31 +551,100 @@ export default function FinalResults() {
 
       {/* ─── Podium ─── */}
       {sorted.length >= 2 && (
-        <section style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 12 }}>
+        <section aria-label="Top finishers" style={{
+          display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 10,
+          position: 'relative',
+        }}>
+          {/* Stage line */}
+          <div aria-hidden style={{
+            position: 'absolute', bottom: 0, left: '10%', right: '10%', height: 2,
+            background: `linear-gradient(90deg, transparent, ${V.line} 20%, ${V.accent} 50%, ${V.line} 80%, transparent)`,
+          }} />
+
           {podiumOrder.map((p, idx) => {
-            // Rise order: 3rd (idx=2) first, then 2nd (idx=0), then 1st (idx=1)
-            const riseDelay = idx === 2 ? 100 : idx === 0 ? 300 : 550
+            const rank     = podiumRank[idx]
+            const cardH    = podiumCardH[idx]
+            const delay    = podiumDelay[idx]
+            const isWinner = rank === 1
+            const cardW    = isWinner ? 200 : 160
+
+            const rankSuffix = rank === 1 ? 'st' : rank === 2 ? 'nd' : 'rd'
+
             return (
-              <div key={p.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                <div className="splash-in" style={{ animationDelay: `${riseDelay + 200}ms`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                  <Avatar player={p} size={44} />
-                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: V.ink, textAlign: 'center', maxWidth: 96 }}>{p.displayName}</div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: V.ink2 }}>{totals[p.id]}</div>
-                </div>
-                <div
-                  className="podium-rise"
-                  style={{
-                    width: 96,
-                    height: podiumBlockH[idx],
-                    background: `color-mix(in oklab, ${p.color} 18%, ${V.surface})`,
-                    border: `1px solid color-mix(in oklab, ${p.color} 40%, transparent)`,
-                    borderRadius: '10px 10px 0 0',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24,
-                    animationDelay: `${riseDelay}ms`,
-                  }}
-                >
-                  {podiumMedals[idx]}
+              <div
+                key={p.id}
+                className="podium-rise"
+                style={{
+                  position: 'relative',
+                  width: cardW,
+                  height: cardH,
+                  borderRadius: '16px 16px 0 0',
+                  overflow: 'hidden',
+                  display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'flex-end',
+                  padding: '0 16px 22px',
+                  background: `linear-gradient(to top, color-mix(in oklab, ${p.color} 22%, ${V.surface}) 0%, color-mix(in oklab, ${p.color} 6%, ${V.surface}) 55%, ${V.surface} 100%)`,
+                  border: `1px solid color-mix(in oklab, ${p.color} ${isWinner ? 55 : 28}%, transparent)`,
+                  animationDelay: `${delay}ms`,
+                  transformOrigin: 'bottom',
+                  boxShadow: isWinner ? `0 0 48px -12px color-mix(in oklab, ${p.color} 35%, transparent)` : 'none',
+                }}
+              >
+                {/* Top accent bar */}
+                <div style={{
+                  position: 'absolute', top: 0, left: 0, right: 0,
+                  height: isWinner ? 3 : 2,
+                  background: p.color,
+                }} />
+
+                {/* Rank numeral watermark */}
+                <div aria-hidden style={{
+                  position: 'absolute',
+                  bottom: -10,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 700,
+                  fontSize: isWinner ? 200 : 160,
+                  lineHeight: 1,
+                  color: p.color,
+                  opacity: 0.055,
+                  userSelect: 'none',
+                  pointerEvents: 'none',
+                  letterSpacing: '-0.05em',
+                }}>{rank}</div>
+
+                {/* Content — fades in after the card rises */}
+                <div style={{
+                  position: 'relative', zIndex: 1,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                  animation: `splash-in 0.5s cubic-bezier(0.34,1.56,0.64,1) ${delay + 220}ms both`,
+                }}>
+                  <Avatar player={p} size={isWinner ? 56 : 44} />
+
+                  <div style={{
+                    fontFamily: 'var(--font-display)', fontWeight: 700,
+                    fontSize: isWinner ? 16 : 14,
+                    color: V.ink, textAlign: 'center',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    maxWidth: cardW - 24,
+                  }}>{p.displayName}</div>
+
+                  <div style={{
+                    fontFamily: 'var(--font-mono)', fontWeight: 700,
+                    fontSize: isWinner ? 30 : 22,
+                    letterSpacing: '-0.03em',
+                    color: isWinner ? V.accent : V.ink2,
+                    fontVariantNumeric: 'tabular-nums',
+                    lineHeight: 1,
+                  }}>{totals[p.id]}</div>
+
+                  <div style={{
+                    fontFamily: 'var(--font-mono)', fontSize: 9,
+                    letterSpacing: '.2em', textTransform: 'uppercase',
+                    color: isWinner ? V.accent : V.muted,
+                    fontWeight: 700, opacity: isWinner ? 1 : 0.8,
+                  }}>{rank}{rankSuffix}</div>
                 </div>
               </div>
             )
