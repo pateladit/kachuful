@@ -60,7 +60,7 @@ export default function RunningTab({
               {players.map((p, i) => (
                 <th key={p.id} scope="col" style={{ padding: '9px 4px', background: V.surface, textAlign: 'center', borderBottom: `1px solid ${V.line}`, borderRight: i < players.length - 1 ? `1px solid ${V.line}` : 'none' }}>
                   <Avatar player={p} size={22} />
-                  <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 11, color: i === dealerIdx ? V.accent : V.ink, display: 'block', marginTop: 2, textTransform: 'none', letterSpacing: 0 }}>{p.displayName}</span>
+                  <span translate="no" style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 11, color: i === dealerIdx ? V.accent : V.ink, display: 'block', marginTop: 2, textTransform: 'none', letterSpacing: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.displayName}</span>
                 </th>
               ))}
             </tr>
@@ -72,7 +72,7 @@ export default function RunningTab({
                 <tr key={r.id}>
                   <td
                     className="game-tab-round-cell"
-                    style={{ textAlign: 'left', padding: '7px 6px 7px 14px', borderBottom: `1px solid ${V.line}`, borderRight: `1px solid ${V.line}`, fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 12, color: V.ink, background: V.bg2 }}
+                    style={{ textAlign: 'left', padding: '7px 6px 7px 14px', borderBottom: `1px solid ${V.line}`, borderRight: `1px solid ${V.line}`, fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 12, color: V.ink, background: V.bg2, fontVariantNumeric: 'tabular-nums' }}
                   >
                     R{r.roundNumber}
                     <span aria-hidden style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: tr?.red ? '#e57860' : V.muted, marginLeft: 3 }}>{tr?.glyph}</span>
@@ -96,7 +96,7 @@ export default function RunningTab({
                           <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, letterSpacing: '-0.02em', color: pts === null ? V.muted : made ? V.accent3 : V.accent2, fontVariantNumeric: 'tabular-nums' }}>
                             {pts === null ? '—' : made ? `+${pts}` : '0'}
                           </span>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.ink2, opacity: .75, marginTop: 1 }}>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: V.ink2, opacity: .75, marginTop: 1, fontVariantNumeric: 'tabular-nums' }}>
                             {b !== undefined ? b : '—'}/{k !== undefined ? k : '—'}
                           </span>
                         </div>
